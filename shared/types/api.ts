@@ -1,0 +1,290 @@
+/**
+ * Response shapes of the hub's session API (`/api/**`, contract §3). The
+ * server handlers return these, the client composables consume them.
+ * Dates are ISO strings.
+ */
+import type { ClaimPile, TitleName } from '#shared/economy'
+
+export type Role = 'player' | 'admin'
+
+export interface NextTitle {
+    name: TitleName
+    stars: number
+    remaining: number
+}
+
+/** `GET /api/me` (401 when signed out). */
+export interface Me {
+    id: string
+    name: string
+    email: string
+    image: string | null
+    gems: number
+    stars: number
+    title: TitleName
+    nextTitle: NextTitle | null
+    /** The daily pile: `gems / cap` ready, full in `fullInDays` days. */
+    claimable: ClaimPile
+    role: Role
+    createdAt: string
+}
+
+/** `POST /api/gems/claim`. */
+export interface ClaimResponse {
+    gems: number
+    claimed: number
+    days: number
+}
+
+export type GemHistoryKind = 'welcome' | 'daily' | 'admin' | 'spend' | 'refund' | 'bounty'
+
+export interface GemHistoryItem {
+    id: string
+    /** What the row is, for labels: spends and refunds come from apps, bounties from star levels. */
+    kind: GemHistoryKind
+    /** The game's name when `category` is a game slug. */
+    gameName: string | null
+    amount: number
+    balanceAfter: number
+    category: string
+    refund: boolean
+    appId: string | null
+    meta: Record<string, unknown> | null
+    createdAt: string
+}
+
+/** `GET /api/gems/history?page=1&pageSize=25`. */
+export interface GemHistoryResponse {
+    items: GemHistoryItem[]
+    page: number
+    pageSize: number
+    total: number
+}
+
+/** Star level n of a game: its name and what it takes ("Hold 10k coins"). */
+export interface StarLevel {
+    key: string
+    /** The level, 1-10. */
+    position: number
+    name: string
+    description: string | null
+    /** Gems paid the first time a player reaches this level (verified apps only). */
+    bounty: number
+    /** Players currently at this level or higher. */
+    holders: number
+}
+
+export interface GameSummary {
+    slug: string
+    name: string
+    tagline: string | null
+    description: string | null
+    playPath: string
+    icon: string | null
+    cover: string | null
+    accent: string | null
+    position: number
+    /** Drafts are listed only for the app owner and admins. */
+    visibility: 'draft' | 'public'
+    /** Whether stars here count toward totals and titles (public, verified, active). */
+    counts: boolean
+    /** The app hasn't called the hub for 24 h: show "offline?". */
+    offline: boolean
+    app: { id: string, name: string, origin: string, verified: boolean }
+    stars: StarLevel[]
+    /** Number of levels (declared stars). */
+    maxStars: number
+    /** The viewer's level and best here, null when signed out or never played. */
+    me: { stars: number, best: number } | null
+}
+
+/** `GET /api/games`: public games of active apps (verified first, then "New" ones), plus the viewer's drafts. */
+export interface GamesResponse {
+    games: GameSummary[]
+}
+
+export interface PlayerRef {
+    id: string
+    name: string
+    image: string | null
+}
+
+/** `GET /api/games/:slug`. */
+export interface GameDetailResponse {
+    game: GameSummary
+    topPlayers: (PlayerRef & { stars: number, best: number })[]
+    /** Latest feed events for this game. */
+    recent: FeedEvent[]
+}
+
+export interface LeaderboardEntry extends PlayerRef {
+    rank: number
+    /** Sum of current levels in counted games. */
+    stars: number
+    title: TitleName
+    /** When the player's levels last changed: ties go to whoever has held their total longest. */
+    heldSince: string
+    /** Current level per counted game slug. */
+    games: Record<string, number>
+}
+
+/** `GET /api/leaderboard?limit=100&offset=0`. `me` is the viewer's row when signed in and ranked. */
+export interface LeaderboardResponse {
+    entries: LeaderboardEntry[]
+    total: number
+    me: LeaderboardEntry | null
+}
+
+export interface StarTrack {
+    game: string
+    name: string
+    icon: string | null
+    accent: string | null
+    /** Counted toward the total right now. */
+    counts: boolean
+    verified: boolean
+    retired: boolean
+    stars: number
+    best: number
+    maxStars: number
+    updatedAt: string
+    levels: { key: string, position: number, name: string, description: string | null }[]
+}
+
+/** `GET /api/players/:id`. */
+export interface PlayerProfileResponse {
+    player: PlayerRef & {
+        stars: number
+        title: TitleName
+        nextTitle: NextTitle | null
+        rank: number | null
+        joinedAt: string
+    }
+    tracks: StarTrack[]
+    recent: FeedEvent[]
+}
+
+export type FeedEventType = 'star' | 'claim' | 'join' | 'title'
+
+export interface FeedEvent {
+    id: string
+    type: FeedEventType
+    player: PlayerRef
+    /**
+     * star: { game, gameName, from, stars, direction: 'up' | 'down', name (level name or null), total }
+     *   ("reached ★3" / "dropped to ★1"; rapid changes collapse into one event);
+     * claim: { days, gems }; title: { title, stars }; join: {}
+     */
+    payload: Record<string, unknown>
+    createdAt: string
+}
+
+/** `GET /api/feed?before=<iso>`: latest 50 events. */
+export interface FeedResponse {
+    events: FeedEvent[]
+}
+
+/** `GET /api/play/:slug/launch`. */
+export interface LaunchResponse {
+    /** iframe src with the launch token in `#pnx`. */
+    url: string
+    /** Hub path that opens the game in its own tab through `/connect`. */
+    directUrl: string
+    app: { id: string, origin: string }
+    game: { slug: string, name: string }
+}
+
+/** A registered app as its owner and admins see it. */
+export interface AppInfo {
+    id: string
+    name: string
+    baseUrl: string
+    returnUrlPrefixes: string[]
+    status: 'active' | 'disabled'
+    /** Set by an admin. Unverified: no star bounties, stars don't count, spends capped per player per day. */
+    verified: boolean
+    verifiedAt: string | null
+    owner: PlayerRef | null
+    createdAt: string
+    /** Games declared by the app's manifest (retired ones included). */
+    games: number
+    lastSeenAt: string | null
+}
+
+/** `GET /api/admin/apps`, developer `GET /api/v1/developer/apps`. */
+export interface AppsResponse {
+    apps: AppInfo[]
+}
+
+/** Create and rotate-key responses: the plaintext app API key, shown once. */
+export interface AppKeyResponse {
+    app: AppInfo
+    apiKey: string
+}
+
+/** `POST /api/admin/apps/:id/verify`. */
+export interface VerifyAppResponse {
+    app: AppInfo
+    /** Outstanding bounties this call paid. */
+    paid: { players: number, gems: number }
+}
+
+/** Developer view of a game: `GET /api/v1/developer/apps/:id/games`. */
+export interface DeveloperGame {
+    slug: string
+    name: string
+    tagline: string | null
+    playPath: string
+    retired: boolean
+    /** The hub page that launches it: `<hub>/play/<slug>`. */
+    playUrl: string
+    stars: {
+        key: string
+        position: number
+        name: string
+        description: string | null
+        bounty: number
+        retired: boolean
+        /** Players currently at this level or higher. */
+        holders: number
+    }[]
+    visibility: 'draft' | 'public'
+    counts: boolean
+}
+
+export interface DeveloperGamesResponse {
+    app: AppInfo
+    games: DeveloperGame[]
+}
+
+/** A developer token as listed (never the token itself). */
+export interface DeveloperToken {
+    id: string
+    name: string
+    /** First characters, e.g. `pnxd_Ab12`. */
+    prefix: string
+    lastUsedAt: string | null
+    createdAt: string
+}
+
+/** `GET /api/developer/tokens` (session). */
+export interface DeveloperTokensResponse {
+    tokens: DeveloperToken[]
+    max: number
+}
+
+/** `POST /api/developer/tokens` (session): the plaintext token, shown once. */
+export interface CreatedDeveloperToken {
+    token: DeveloperToken
+    secret: string
+}
+
+/** `POST /api/v1/developer/apps/:id/test-launch`. */
+export interface TestLaunchResponse {
+    /** A launch token for the token owner (the test player), aud = app id. */
+    token: string
+    /** `<baseUrl><playPath>#pnx=<token>` for the app's first active game (or `<baseUrl>/` without games). */
+    url: string
+    playerId: string
+    expiresIn: number
+}
