@@ -80,12 +80,16 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                             <DropdownMenuItem as-child>
                                 <NuxtLink to="/settings/developer"><Code class="size-4" /> Developer</NuxtLink>
                             </DropdownMenuItem>
-                            <DropdownMenuItem v-if="isAdmin" as-child>
-                                <NuxtLink to="/admin/apps"><Shield class="size-4" /> Apps</NuxtLink>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem v-if="isAdmin" as-child>
-                                <NuxtLink to="/admin/players"><Users class="size-4" /> Players</NuxtLink>
-                            </DropdownMenuItem>
+                            <template v-if="isAdmin">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel class="text-xs font-medium text-muted-foreground">Admin</DropdownMenuLabel>
+                                <DropdownMenuItem as-child>
+                                    <NuxtLink to="/admin/apps"><Shield class="size-4" /> Apps</NuxtLink>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem as-child>
+                                    <NuxtLink to="/admin/players"><Users class="size-4" /> Players</NuxtLink>
+                                </DropdownMenuItem>
+                            </template>
                             <DropdownMenuItem class="md:hidden" @select="toggleTheme">
                                 <Sun v-if="isDark" class="size-4" /><Moon v-else class="size-4" /> {{ isDark ? 'Light mode' : 'Dark mode' }}
                             </DropdownMenuItem>
