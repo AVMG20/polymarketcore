@@ -1,0 +1,205 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "vue-sonner/style.css";
+/* Self-hosted fonts (latin subset): nothing is fetched from a CDN at build or runtime. */
+@import "@fontsource/bricolage-grotesque/latin-700.css";
+@import "@fontsource/bricolage-grotesque/latin-800.css";
+@import "@fontsource/inter/latin-400.css";
+@import "@fontsource/inter/latin-500.css";
+@import "@fontsource/inter/latin-600.css";
+@import "@fontsource/jetbrains-mono/latin-400.css";
+@import "@fontsource/jetbrains-mono/latin-500.css";
+@import "@fontsource/jetbrains-mono/latin-700.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Theme tokens: docs/design.md. shadcn variable names, OKLCH. */
+:root {
+    --radius: 1rem;
+    --background: oklch(0.985 0.004 250);
+    --foreground: oklch(0.21 0.03 262);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.21 0.03 262);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.21 0.03 262);
+    --primary: oklch(0.57 0.21 285);
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.955 0.012 260);
+    --secondary-foreground: oklch(0.28 0.03 262);
+    --muted: oklch(0.955 0.012 260);
+    --muted-foreground: oklch(0.49 0.025 262);
+    --accent: oklch(0.95 0.03 285);
+    --accent-foreground: oklch(0.32 0.12 285);
+    --destructive: oklch(0.56 0.22 25);
+    --border: oklch(0.91 0.012 260);
+    --input: oklch(0.91 0.012 260);
+    --ring: oklch(0.57 0.21 285);
+    --gem: oklch(0.70 0.13 185);
+    --gem-foreground: oklch(0.2 0.04 200);
+    --star: oklch(0.80 0.16 80);
+    --star-foreground: oklch(0.25 0.05 70);
+    --coin: oklch(0.83 0.15 92);
+    --success: oklch(0.56 0.15 150);
+    --dot: oklch(0.21 0.03 262 / 0.06);
+}
+
+.dark {
+    --background: oklch(0.17 0.025 268);
+    --foreground: oklch(0.96 0.01 260);
+    --card: oklch(0.215 0.03 268);
+    --card-foreground: oklch(0.96 0.01 260);
+    --popover: oklch(0.23 0.03 268);
+    --popover-foreground: oklch(0.96 0.01 260);
+    --primary: oklch(0.70 0.19 285);
+    --primary-foreground: oklch(0.16 0.03 268);
+    --secondary: oklch(0.27 0.03 268);
+    --secondary-foreground: oklch(0.94 0.01 260);
+    --muted: oklch(0.27 0.03 268);
+    --muted-foreground: oklch(0.70 0.025 262);
+    --accent: oklch(0.30 0.06 285);
+    --accent-foreground: oklch(0.92 0.05 285);
+    --destructive: oklch(0.66 0.21 25);
+    --border: oklch(0.30 0.03 268);
+    --input: oklch(0.32 0.03 268);
+    --ring: oklch(0.70 0.19 285);
+    --gem: oklch(0.78 0.13 185);
+    --gem-foreground: oklch(0.18 0.03 200);
+    --star: oklch(0.84 0.15 82);
+    --star-foreground: oklch(0.22 0.05 70);
+    --coin: oklch(0.86 0.14 92);
+    --success: oklch(0.74 0.16 150);
+    --dot: oklch(0.96 0.01 260 / 0.05);
+}
+
+@theme inline {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Bricolage Grotesque', 'Inter', ui-sans-serif, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-destructive: var(--destructive);
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+    --color-gem: var(--gem);
+    --color-gem-foreground: var(--gem-foreground);
+    --color-star: var(--star);
+    --color-star-foreground: var(--star-foreground);
+    --color-coin: var(--coin);
+    --color-success: var(--success);
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground font-sans antialiased;
+        /* Very subtle dotted grid (design.md: signature details). */
+        background-image: radial-gradient(var(--dot) 1px, transparent 1px);
+        background-size: 22px 22px;
+    }
+
+    h1, h2, h3, h4 {
+        @apply font-display font-bold tracking-tight;
+    }
+}
+
+
+@utility tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Squashy spring for hover on tiles and chunky controls. */
+@utility spring {
+    transition-property: transform, box-shadow, border-color;
+    transition-duration: 220ms;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@layer base {
+    html {
+        -webkit-text-size-adjust: 100%;
+        scrollbar-gutter: stable;
+    }
+    /* Keep long names, urls and tokens inside their box. */
+    body {
+        overflow-wrap: anywhere;
+    }
+    ::selection {
+        background: color-mix(in oklch, var(--primary) 30%, transparent);
+    }
+    a:focus-visible, summary:focus-visible, [role='button']:focus-visible {
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+        border-radius: 0.5rem;
+    }
+}
+
+@keyframes pnx-pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    60% { transform: scale(1.12); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+@keyframes pnx-rise {
+    0% { transform: translateY(14px) scale(0.9); opacity: 0; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes pnx-burst {
+    0% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) rotate(var(--a)) translateY(var(--d)) scale(0.2); opacity: 0; }
+}
+@keyframes pnx-shine {
+    0% { transform: translateX(-120%) skewX(-20deg); }
+    100% { transform: translateX(260%) skewX(-20deg); }
+}
+@keyframes pnx-wallet {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.18); }
+    100% { transform: scale(1); }
+}
+.pnx-wallet-bump {
+    animation: pnx-wallet 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* One place to honour the OS setting: no motion, no waiting. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* vue-sonner: keep toasts clear of the notch and above the bottom nav. */
+[data-sonner-toaster] {
+    --offset: max(16px, env(safe-area-inset-top));
+}
+
+/* Rendered Markdown (game descriptions, utils/markdown.ts). */
+.prose-lite p, .prose-lite ul, .prose-lite h4 { margin-block: 0.5rem; }
+.prose-lite h4 { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+.prose-lite ul { list-style: disc; padding-left: 1.25rem; }
+.prose-lite a { color: var(--primary); text-decoration: underline; text-underline-offset: 2px; }
+.prose-lite code { font-family: var(--font-mono); font-size: 0.85em; background: var(--muted); padding: 0.1em 0.35em; border-radius: 0.35rem; }
