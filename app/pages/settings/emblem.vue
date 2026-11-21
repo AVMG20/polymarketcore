@@ -13,17 +13,14 @@ const saved = computed(() => history.value.map(entry => ({ entry, data: parseEmb
 </script>
 
 <template>
-    <div class="mx-auto max-w-4xl space-y-6">
+    <div class="space-y-6">
         <div class="flex items-start justify-between gap-4">
-            <div>
-                <h1 class="text-3xl">Emblem</h1>
-                <p class="text-sm text-muted-foreground">Draw the avatar players see next to your name.</p>
-            </div>
+            <h1 class="text-3xl">Emblem</h1>
             <Button variant="ghost" size="sm" as-child><NuxtLink to="/settings"><ArrowLeft /> Settings</NuxtLink></Button>
         </div>
 
         <div v-if="restoredDraft && dirty" class="flex flex-wrap items-center gap-3 rounded-2xl border border-primary/40 bg-primary/5 px-4 py-3 text-sm">
-            <p class="flex-1">Your unsaved drawing is back.</p>
+            <p class="flex-1">Unsaved drawing restored</p>
             <Button size="sm" variant="outline" @click="reset">Discard it</Button>
         </div>
 
@@ -36,13 +33,13 @@ const saved = computed(() => history.value.map(entry => ({ entry, data: parseEmb
         <Card>
             <CardHeader>
                 <CardTitle>Saved</CardTitle>
-                <CardDescription>Your last {{ EMBLEM_HISTORY_LIMIT }} saves. Pick one to edit it again.</CardDescription>
+                <CardDescription class="tabular">{{ history.length }} / {{ EMBLEM_HISTORY_LIMIT }}</CardDescription>
             </CardHeader>
             <CardContent class="space-y-4">
                 <div v-if="historyPending && !history.length" class="flex flex-wrap gap-3" aria-hidden="true">
                     <Skeleton v-for="i in 6" :key="i" class="size-20 rounded-2xl" />
                 </div>
-                <PnxStateBlock v-else-if="!history.length" :icon="History" title="Nothing saved yet" text="Save your emblem and it shows up here." />
+                <PnxStateBlock v-else-if="!history.length" :icon="History" title="Nothing saved yet" />
                 <ul v-else class="flex flex-wrap gap-3">
                     <li v-for="{ entry, data } in saved" :key="entry.id">
                         <button
@@ -60,7 +57,7 @@ const saved = computed(() => history.value.map(entry => ({ entry, data: parseEmb
                     </li>
                 </ul>
                 <div v-if="me?.emblem" class="flex flex-wrap items-center gap-3 border-t pt-4">
-                    <p class="flex-1 text-sm text-muted-foreground">Rather show your {{ me.image ? 'avatar picture' : 'initial' }}? Your saves stay here.</p>
+                    <span class="flex-1" />
                     <Button size="sm" variant="ghost" class="text-destructive hover:text-destructive" :disabled="busy" @click="remove">Remove emblem</Button>
                 </div>
             </CardContent>
