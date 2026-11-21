@@ -57,6 +57,13 @@
       "when": 1795294325650,
       "tag": "0007_wakeful_nextwave",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795299552664,
+      "tag": "0008_youthful_rhodey",
+      "breakpoints": true
     }
   ]
 }

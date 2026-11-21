@@ -79,6 +79,7 @@ export function toAppInfo(app: AppRow, gameCount: number, owner: AppInfo['owner'
         returnUrlPrefixes: app.returnUrlPrefixes,
         repoUrl: app.repoUrl,
         status: app.status,
+        disabledByAdmin: app.disabledByAdmin,
         verified: app.verified,
         verifiedAt: app.verifiedAt ? app.verifiedAt.toISOString() : null,
         owner,
@@ -144,11 +145,12 @@ export async function registerApp(input: CreateAppInput): Promise<{ app: AppRow,
  * Update name, URLs and the repo URL (null clears it). A new baseUrl re-checks the stored prefixes against
  * its origin unless new prefixes come with it.
  */
-export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?: string, returnUrlPrefixes?: string[], repoUrl?: string | null, status?: 'active' | 'disabled' }): Promise<AppRow> {
+export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?: string, returnUrlPrefixes?: string[], repoUrl?: string | null, status?: 'active' | 'disabled', disabledByAdmin?: boolean }): Promise<AppRow> {
     const set: Partial<typeof apps.$inferInsert> = {}
     if (changes.name !== undefined) set.name = changes.name
     if (changes.repoUrl !== undefined) set.repoUrl = changes.repoUrl
     if (changes.status !== undefined) set.status = changes.status
+    if (changes.disabledByAdmin !== undefined) set.disabledByAdmin = changes.disabledByAdmin
     if (changes.baseUrl !== undefined || changes.returnUrlPrefixes !== undefined) {
         const urls = urlsOrThrow(changes.baseUrl ?? app.baseUrl, changes.returnUrlPrefixes ?? app.returnUrlPrefixes)
         set.baseUrl = urls.baseUrl
@@ -159,6 +161,30 @@ export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?:
     }
     const [updated] = await db.update(apps).set(set).where(eq(apps.id, app.id)).returning()
     return updated!
+}
+
+/**
+ * The owner switches their own app on or off. An app an admin disabled stays
+ * off, and switching on counts toward MAX_DEVELOPER_APPS (owner row locked, so
+ * parallel enables can't pass the limit).
+ */
+export async function setOwnAppStatus(userId: string, appId: string, status: 'active' | 'disabled'): Promise<AppRow> {
+    return db.transaction(async (tx) => {
+        await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for('update')
+        const [app] = await tx.select().from(apps).where(and(eq(apps.id, appId), eq(apps.ownerUserId, userId)))
+        if (!app) throw createError({ statusCode: 404, statusMessage: `App ${appId} not found among your apps` })
+        if (app.status === status) return app
+        if (status === 'active') {
+            if (app.disabledByAdmin) throw createError({ statusCode: 403, statusMessage: 'An admin disabled this app: ask an admin to enable it' })
+            const [owned] = await tx.select({ n: count() }).from(apps)
+                .where(and(eq(apps.ownerUserId, userId), ne(apps.status, 'disabled')))
+            if ((owned?.n ?? 0) >= MAX_DEVELOPER_APPS) {
+                throw createError({ statusCode: 400, statusMessage: `You already have ${MAX_DEVELOPER_APPS} active apps, the maximum: disable one first` })
+            }
+        }
+        const [updated] = await tx.update(apps).set({ status }).where(eq(apps.id, appId)).returning()
+        return updated!
+    })
 }
 
 /** Replace the app's API key; the old one stops working at once. */

@@ -89,6 +89,8 @@ export const apps = pgTable('apps', {
     repoUrl: text('repo_url'),
     apiKeyHash: text('api_key_hash').notNull().unique(),
     status: text('status').$type<AppStatus>().notNull().default('active'),
+    // An admin disabled it: the owner can't switch it back on (only an admin can).
+    disabledByAdmin: boolean('disabled_by_admin').notNull().default(false),
     // The player who registered it through the developer API (or the admin who created it).
     ownerUserId: text('owner_user_id').references(() => user.id, { onDelete: 'set null' }),
     // Set only by an admin. Unverified apps pay no star bounties, their stars don't count

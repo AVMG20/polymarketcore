@@ -297,6 +297,11 @@ export interface LaunchResponse {
     game: { slug: string, name: string }
 }
 
+/** `GET /api/me/apps`: the apps the signed-in player registered. */
+export interface MyAppsResponse {
+    apps: AppInfo[]
+}
+
 /** A registered app as its owner and admins see it. */
 export interface AppInfo {
     id: string
@@ -306,6 +311,8 @@ export interface AppInfo {
     /** Where the app's code lives (https), or null. */
     repoUrl: string | null
     status: 'active' | 'disabled'
+    /** An admin disabled it; the owner can't re-enable it. */
+    disabledByAdmin: boolean
     /** Set by an admin. Unverified: no star bounties, stars don't count, spends capped per player per day. */
     verified: boolean
     verifiedAt: string | null
