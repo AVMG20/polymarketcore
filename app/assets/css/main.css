@@ -40,6 +40,11 @@
     --star-foreground: oklch(0.25 0.05 70);
     --coin: oklch(0.83 0.15 92);
     --success: oklch(0.56 0.15 150);
+    /* Gem charts: in (teal) vs out (coral), validated as a pair for CVD and contrast on the card. */
+    --chart-in: oklch(0.62 0.12 185);
+    --chart-out: oklch(0.62 0.18 35);
+    /* Text for gems going out (amounts), readable on the card. */
+    --loss: oklch(0.55 0.17 33);
     --dot: oklch(0.21 0.03 262 / 0.06);
 }
 
@@ -68,6 +73,9 @@
     --star-foreground: oklch(0.22 0.05 70);
     --coin: oklch(0.86 0.14 92);
     --success: oklch(0.74 0.16 150);
+    --chart-in: oklch(0.66 0.12 185);
+    --chart-out: oklch(0.66 0.16 38);
+    --loss: oklch(0.76 0.13 40);
     --dot: oklch(0.96 0.01 260 / 0.05);
 }
 
@@ -105,6 +113,9 @@
     --color-star-foreground: var(--star-foreground);
     --color-coin: var(--coin);
     --color-success: var(--success);
+    --color-chart-in: var(--chart-in);
+    --color-chart-out: var(--chart-out);
+    --color-loss: var(--loss);
 }
 
 @layer base {

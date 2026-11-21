@@ -2,7 +2,6 @@ import type {
     FeedResponse,
     GameDetailResponse,
     GamesResponse,
-    GemHistoryResponse,
     LeaderboardResponse,
     PlayerProfileResponse
 } from '#shared/types/api'
@@ -30,9 +29,3 @@ export const usePlayerProfile = (id: MaybeRefOrGetter<string>) =>
 
 export const useFeed = () =>
     useAsyncData('pnx-feed', () => apiFetch<FeedResponse>('/api/feed'))
-
-export const useGemHistory = (page: MaybeRefOrGetter<number> = 1, pageSize: MaybeRefOrGetter<number> = 25) =>
-    useAsyncData(
-        () => `pnx-gem-history-${toValue(page)}-${toValue(pageSize)}`,
-        () => apiFetch<GemHistoryResponse>('/api/gems/history', { query: { page: toValue(page), pageSize: toValue(pageSize) } })
-    )
