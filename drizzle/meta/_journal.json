@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1795252950740,
+      "tag": "0000_yummy_jazinda",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795254115885,
+      "tag": "0001_reflective_talisman",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795254435625,
+      "tag": "0002_daffy_absorbing_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795254435867,
+      "tag": "0003_acoustic_junta",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795254499851,
+      "tag": "0004_awesome_kate_bishop",
+      "breakpoints": true
+    }
+  ]
+}
