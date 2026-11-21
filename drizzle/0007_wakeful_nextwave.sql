@@ -1,0 +1,1 @@
+ALTER TABLE "user" ADD COLUMN "game_order" text[];

@@ -32,6 +32,8 @@ export const user = pgTable('user', {
     emblem: text('emblem'),
     // Ring tier 0-4 around the avatar (shared/prestige.ts). Display only.
     prestige: integer('prestige').notNull().default(0),
+    // The player's own order of the games list (slugs), set by PUT /api/me/game-order. Null: hub order.
+    gameOrder: text('game_order').array(),
     createdAt: createdAt(),
     updatedAt: updatedAt()
 }, table => [
@@ -83,6 +85,8 @@ export const apps = pgTable('apps', {
     name: text('name').notNull(),
     baseUrl: text('base_url').notNull(),
     returnUrlPrefixes: text('return_url_prefixes').array().notNull().default(sql`'{}'::text[]`),
+    // Where the app's code lives (https), shown on its game pages. Set by the owner or an admin.
+    repoUrl: text('repo_url'),
     apiKeyHash: text('api_key_hash').notNull().unique(),
     status: text('status').$type<AppStatus>().notNull().default('active'),
     // The player who registered it through the developer API (or the admin who created it).
