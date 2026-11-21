@@ -31,7 +31,7 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
     <header class="sticky top-0 z-40 border-b bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div class="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 sm:gap-4">
             <NuxtLink to="/" class="flex items-center gap-1.5 font-display text-xl font-extrabold tracking-tight">
-                <PnxGemGlyph class="size-5 text-gem" />Polynux
+                <PnxLogo class="size-7" />Polynux
             </NuxtLink>
             <nav class="ml-2 hidden items-center gap-1 text-sm md:flex" aria-label="Main">
                 <Button
