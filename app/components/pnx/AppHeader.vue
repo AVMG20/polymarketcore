@@ -45,6 +45,7 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                 </Button>
             </nav>
             <div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+                <PnxSearch />
                 <Button variant="ghost" size="icon" :class="me ? 'hidden md:inline-flex' : ''" aria-label="Toggle theme" @click="toggleTheme">
                     <ClientOnly>
                         <Sun v-if="isDark" class="size-4" />

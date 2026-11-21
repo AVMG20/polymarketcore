@@ -200,6 +200,16 @@ export interface LeaderboardEntry extends PlayerRef {
     games: Record<string, number>
 }
 
+export interface SearchPlayer extends PlayerRef {
+    rank: number
+    stars: number
+}
+
+/** `GET /api/search?q=`: players whose name matches (games are filtered client side). */
+export interface SearchResponse {
+    players: SearchPlayer[]
+}
+
 /** `GET /api/leaderboard?limit=100&offset=0`: every player, most stars first. `me` is the viewer's row when signed in. */
 export interface LeaderboardResponse {
     entries: LeaderboardEntry[]

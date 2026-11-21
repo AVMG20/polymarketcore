@@ -11,6 +11,7 @@ import type {
     LeaderboardEntry,
     LeaderboardResponse,
     PlayerProfileResponse,
+    SearchPlayer,
     StarTrack
 } from '#shared/types/api'
 import { appOrigin } from '#server/utils/apps'
@@ -260,6 +261,23 @@ interface AdminPlayerRow extends PlayerRow {
     stars: number
     total: number
     created_at: Date
+}
+
+/** Player search for the nav bar: name matches, exact and prefix hits first, then by rank. */
+export async function searchPlayers(q: string, limit = 8): Promise<SearchPlayer[]> {
+    const term = q.trim()
+    if (!term) return []
+    const escaped = term.replace(/[\\%_]/g, m => `\\${m}`)
+    const result = await db.execute<PlayerRow & { rank: number, stars: number } & Record<string, unknown>>(sql`
+        with ${totalsCte()}
+        select r.rank, r.stars, u.id, u.name, u.image, u.emblem, u.prestige
+        from ranked r
+        join ${user} u on u.id = r.user_id
+        where u.name ilike ${`%${escaped}%`}
+        order by lower(u.name) = lower(${term}) desc, u.name ilike ${`${escaped}%`} desc, r.rank
+        limit ${limit}
+    `)
+    return result.rows.map(r => ({ id: r.id, name: r.name, image: r.image, emblem: r.emblem, prestige: r.prestige, rank: r.rank, stars: r.stars }))
 }
 
 /** The player's leaderboard rank (null only for an unknown player). */
