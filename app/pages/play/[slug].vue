@@ -74,8 +74,8 @@ onBeforeUnmount(() => clearTimeout(momentTimer))
     <!-- The bar is 2.75rem + the notch; the game gets everything below it (dvh, no page scroll). -->
     <div class="flex h-full flex-col pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
         <header class="flex h-[calc(2.75rem+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b bg-background px-2 pt-[env(safe-area-inset-top)] sm:px-3">
-            <Button variant="ghost" size="icon-sm" as-child aria-label="Back to Polynux">
-                <NuxtLink to="/"><ArrowLeft /></NuxtLink>
+            <Button variant="ghost" size="icon-sm" as-child aria-label="Back to game page">
+                <NuxtLink :to="`/games/${slug}`"><ArrowLeft /></NuxtLink>
             </Button>
             <span class="min-w-0 flex-1 truncate font-display font-bold">{{ title }}</span>
             <template v-if="me">
@@ -111,7 +111,7 @@ onBeforeUnmount(() => clearTimeout(momentTimer))
                 />
                 <div v-if="pending || !loaded" class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background" role="status">
                     <PnxGemGlyph class="size-10 text-gem motion-safe:animate-pulse" />
-                    <p class="text-sm text-muted-foreground">Loading {{ title === 'Loading' ? 'game' : title }}…</p>
+                    <p class="text-sm text-muted-foreground">{{ title === 'Loading' ? 'Loading' : title }}</p>
                 </div>
             </template>
         </div>
