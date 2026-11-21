@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hello Game</title>
+    <style>
+        body { font: 16px/1.5 system-ui, sans-serif; margin: 0; display: grid; place-items: center; min-height: 100vh; background: #14161f; color: #eef; }
+        main { text-align: center; }
+        button { font: inherit; padding: .6em 1.2em; margin: .3em; border-radius: 12px; border: 0; cursor: pointer; }
+        .stars { font-size: 2rem; color: #f5c451; letter-spacing: .2em; }
+        .err { color: #ff8a8a; min-height: 1.5em; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>Hello, <span id="name">…</span></h1>
+    <p class="stars" id="stars"></p>
+    <p><span id="points">0</span> points · <span id="gems">0</span> gems</p>
+    <button id="play">Play a round (+1 point)</button>
+    <button id="spend">Spend 1 gem (+1 point)</button>
+    <button id="reset">Lose everything</button>
+    <p class="err" id="err"></p>
+</main>
+<script type="module">
+const $ = id => document.getElementById(id)
+const config = await (await fetch('/api/config')).json()
+const inFrame = window.parent !== window
+const tellHub = msg => inFrame && window.parent.postMessage({ source: 'pnx', ...msg }, config.hub)
+
+// 1. A launch token arrives in #pnx: strip it from the URL, trade it for our own session.
+const token = new URLSearchParams(location.hash.slice(1)).get('pnx')
+if (token) {
+    history.replaceState(null, '', location.pathname + location.search)
+    await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
+}
+
+async function api(path, body) {
+    const res = await fetch(path, body === undefined ? {} : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    if (res.status === 401) {
+        // 2. No session: inside the hub ask for a fresh token, on our own domain go through /connect.
+        if (inFrame) tellHub({ type: 'relaunch' })
+        else location.href = `${config.hub}/connect?app=${encodeURIComponent(config.appId)}&return=${encodeURIComponent(location.href)}`
+        throw new Error('no session')
+    }
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? 'Something went wrong')
+    return data
+}
+
+function render(state) {
+    if (state.name) $('name').textContent = state.name
+    if (state.gems !== undefined) $('gems').textContent = state.gems
+    $('points').textContent = state.points
+    $('stars').textContent = '★'.repeat(state.stars) + '☆'.repeat(3 - state.stars)
+}
+
+async function act(path, body) {
+    $('err').textContent = ''
+    try {
+        const state = await api(path, body)
+        render(state)
+        if (state.gems !== undefined) tellHub({ type: 'wallet', gems: state.gems })
+        tellHub({ type: 'star', game: config.game, stars: state.stars })
+    } catch (e) {
+        $('err').textContent = e.message
+    }
+}
+
+$('play').onclick = () => act('/api/play', {})
+$('spend').onclick = () => act('/api/spend', { key: crypto.randomUUID() })
+$('reset').onclick = () => act('/api/reset', {})
+window.addEventListener('message', e => {
+    if (e.origin === new URL(config.hub).origin && e.data?.source === 'pnx' && e.data.type === 'hello') $('gems').textContent = e.data.gems
+})
+
+render(await api('/api/me'))
+</script>
+</body>
+</html>
