@@ -5,6 +5,22 @@ import { Toaster } from '@/components/ui/sonner'
 const colorMode = useColorMode()
 // Notches: let the layout use env(safe-area-inset-*).
 useHead({ meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }] })
+// Link previews: no logo file exists, so the card is text only.
+const TITLE = 'Polynux'
+const DESCRIPTION = 'Free games, one gem wallet, one leaderboard.'
+useHead({
+    meta: [
+        { name: 'description', content: DESCRIPTION },
+        { name: 'theme-color', content: '#7c5cf0' },
+        { property: 'og:site_name', content: TITLE },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: TITLE },
+        { property: 'og:description', content: DESCRIPTION },
+        { name: 'twitter:card', content: 'summary' },
+        { name: 'twitter:title', content: TITLE },
+        { name: 'twitter:description', content: DESCRIPTION }
+    ]
+})
 const toastTheme = computed(() => (colorMode.value === 'light' ? 'light' : 'dark'))
 </script>
 
