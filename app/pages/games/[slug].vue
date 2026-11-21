@@ -119,7 +119,7 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                             <li v-for="(p, i) in data.topPlayers" :key="p.id">
                                 <NuxtLink :to="`/players/${p.id}`" class="flex items-center gap-3 px-4 py-2.5 hover:bg-accent/50">
                                     <span class="tabular w-5 text-center text-sm text-muted-foreground">{{ i + 1 }}</span>
-                                    <PnxPlayerAvatar :name="p.name" :image="p.image" class="size-8" />
+                                    <PnxPlayerAvatar :name="p.name" :image="p.image" :emblem="p.emblem" :prestige="p.prestige" class="size-8" />
                                     <span class="min-w-0 flex-1 truncate font-medium">{{ p.name }}</span>
                                     <PnxStarChip :count="p.stars" size="sm" />
                                 </NuxtLink>

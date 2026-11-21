@@ -59,12 +59,12 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                     <DropdownMenu>
                         <DropdownMenuTrigger as-child>
                             <button class="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label="Account">
-                                <PnxPlayerAvatar :name="me.name" :image="me.image" class="size-8" />
+                                <PnxPlayerAvatar :name="me.name" :image="me.image" :emblem="me.emblem" :prestige="me.prestige" class="size-8" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" class="w-56">
                             <DropdownMenuLabel>
-                                <p class="truncate">{{ me.name }}</p>
+                                <p class="flex min-w-0 items-center gap-1.5"><span class="truncate">{{ me.name }}</span><PnxPrestigeBadge :prestige="me.prestige" /></p>
                                 <p class="text-xs font-normal text-muted-foreground">{{ me.title }}</p>
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />

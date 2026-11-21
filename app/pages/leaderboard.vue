@@ -50,9 +50,9 @@ const tracks = (e: LeaderboardEntry) => columns.value.filter(g => (e.games[g.slu
                     >
                         <div class="flex items-center gap-3">
                             <span class="tabular flex size-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold" :class="medal(e.rank)">{{ e.rank }}</span>
-                            <PnxPlayerAvatar :name="e.name" :image="e.image" class="size-9" />
+                            <PnxPlayerAvatar :name="e.name" :image="e.image" :emblem="e.emblem" :prestige="e.prestige" class="size-9" />
                             <div class="min-w-0 flex-1">
-                                <p class="truncate font-semibold leading-tight">{{ e.name }}</p>
+                                <p class="flex min-w-0 items-center gap-1.5 font-semibold leading-tight"><span class="truncate">{{ e.name }}</span><PnxPrestigeBadge :prestige="e.prestige" /></p>
                                 <PnxTitleBadge :title="e.title" class="mt-0.5" />
                             </div>
                             <PnxStarChip :count="e.stars" />
@@ -83,9 +83,9 @@ const tracks = (e: LeaderboardEntry) => columns.value.filter(g => (e.games[g.slu
                     class="flex items-center gap-3 rounded-2xl border border-primary/50 bg-card/95 px-3 py-3 shadow-lg backdrop-blur sm:px-4"
                 >
                     <span class="tabular flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">{{ mine.rank }}</span>
-                    <PnxPlayerAvatar :name="mine.name" :image="mine.image" class="size-9" />
+                    <PnxPlayerAvatar :name="mine.name" :image="mine.image" :emblem="mine.emblem" :prestige="mine.prestige" class="size-9" />
                     <div class="min-w-0 flex-1">
-                        <p class="truncate font-semibold leading-tight">You</p>
+                        <p class="flex min-w-0 items-center gap-1.5 font-semibold leading-tight"><span class="truncate">You</span><PnxPrestigeBadge :prestige="mine.prestige" /></p>
                         <PnxTitleBadge :title="mine.title" class="mt-0.5" />
                     </div>
                     <PnxStarChip :count="mine.stars" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next'
+import { Check, Paintbrush } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -43,7 +43,7 @@ async function submitPassword() {
             <CardContent>
                 <form class="space-y-4" @submit.prevent="saveProfile">
                     <div class="flex items-center gap-4">
-                        <PnxPlayerAvatar :name="name || me?.name || '?'" :image="image" class="size-14 text-xl" />
+                        <PnxPlayerAvatar :name="name || me?.name || '?'" :image="image" :emblem="me?.emblem" :prestige="me?.prestige" class="size-14 text-xl" />
                         <div class="min-w-0 flex-1 space-y-2">
                             <Label for="name">Name</Label>
                             <Input id="name" v-model="name" maxlength="30" required />
@@ -58,6 +58,17 @@ async function submitPassword() {
                         <Check v-if="profileSaved" /> {{ profileSaved ? 'Saved' : 'Save' }}
                     </Button>
                 </form>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Emblem</CardTitle>
+                <CardDescription>{{ me?.emblem ? 'Your drawn avatar. It shows instead of your picture.' : 'Draw your own avatar.' }}</CardDescription>
+            </CardHeader>
+            <CardContent class="flex items-center gap-4">
+                <PnxPlayerAvatar :name="me?.name || '?'" :image="me?.image" :emblem="me?.emblem" :prestige="me?.prestige" class="size-12 text-lg" />
+                <Button variant="outline" as-child><NuxtLink to="/settings/emblem"><Paintbrush /> {{ me?.emblem ? 'Edit emblem' : 'Draw emblem' }}</NuxtLink></Button>
             </CardContent>
         </Card>
 

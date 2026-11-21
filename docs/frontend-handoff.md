@@ -31,6 +31,7 @@ visible to their owner and admins. A game is "offline?" when its app hasn't call
 | `useAuthActions()` | `signIn`, `signUp`, `signInWithDiscord`, `signOut`, `pending`, `error`, `redirectTarget` (honours `?redirect=`; `/connect` gets a full navigation). |
 | `useHubConfig()` | `GET /api/config` → `{ discord }`. |
 | `useProfile()` | `name`, `image` refs, `save()` (better-auth `updateUser`; the server validates), `pending`, `error`. |
+| `useEmblem()` | The emblem editor: `current` (what the canvas starts from), `change(data)` (keeps an unsaved draft in this browser), `restoredDraft`, `dirty`, `reset()`, `history`, `load(entry)`, `save(data)`, `remove()` (back to image/initial), `busy`. Patches `me.emblem`. |
 | `useDeveloperTokens()` | `tokens`, `max`, `create(name)`, `revoke(id)`, `revealed` (`{ token, secret }`: the secret is shown once), `busy`. |
 | `useDeveloperGuide()` | `markdown` (the text of `/developers.md`), `copy()`, `copied`. |
 | `usePnxBridge(iframeRef, appOrigin, { onStar, onRelaunch })` | The iframe postMessage bridge (contract §1), origin- and source-checked: `wallet` sets gems, `star { game, stars }` refetches `useMe` and sets `lastStar` (`{ game, stars, at }`), `title` sets `gameTitle`, `relaunch` calls `onRelaunch` at most once per 30 s. `sendHello()` on iframe `load`. |
@@ -44,11 +45,15 @@ Route middleware: `auth`, `guest`, `admin`.
 
 ## Session API (cookie auth)
 
-All errors are `{ statusCode, statusMessage }`. Dates are ISO strings.
+All errors are `{ statusCode, statusMessage }`. Dates are ISO strings. Every player in a response (`PlayerRef`: top
+players, leaderboard entries, profiles, feed events) is `{ id, name, image, emblem, prestige }`; pass all of
+them to `PnxPlayerAvatar`. App owners in `AppInfo` stay `{ id, name, image }` (it is part of `/api/v1`).
 
 | Route | Auth | Response |
 |---|---|---|
-| `GET /api/me` | user (401 signed out) | `Me`: `{ id, name, email, image, gems, stars (counted total), title, nextTitle, claimable: { days, gems, cap, fullInDays }, role, createdAt }`. Also retries a failed welcome grant. |
+| `GET /api/me` | user (401 signed out) | `Me`: `{ id, name, email, image, emblem, prestige, gems, stars (counted total), title, nextTitle, claimable: { days, gems, cap, fullInDays }, role, createdAt }`. Also retries a failed welcome grant. |
+| `PUT /api/me/emblem` | user | `{ emblem }` (EmblemData or its JSON; `null` clears) → `{ emblem, historyId }`. 400 `emblem is not a valid emblem`. History keeps the newest `EMBLEM_HISTORY_LIMIT`. |
+| `GET /api/me/emblem/history` | user | `{ entries: [{ id, emblem, createdAt }] }`, newest first |
 | `POST /api/gems/claim` | user, 5 per 10 s | `{ gems, claimed, days }` |
 | `GET /api/gems/history?page&pageSize` | user | `{ items: [{ id, kind: 'welcome'\|'daily'\|'admin'\|'spend'\|'refund'\|'bounty', gameName, amount (signed), balanceAfter, category, refund, appId, meta, createdAt }], page, pageSize, total }` |
 | `GET /api/games` | public, personalised | `{ games: GameSummary[] }`, verified apps first. `GameSummary`: `{ slug, name, tagline, description (markdown), playPath, icon (url or `lucide:name`), cover, accent, position, visibility, counts, offline, app: { id, name, origin, verified }, stars: StarLevel[], maxStars, me: { stars, best } \| null }`. `StarLevel`: `{ key, position (level), name, description, bounty, holders (players at ≥ this level) }`. Split into Games (`app.verified`), New (`!app.verified`) and Your drafts (`visibility === 'draft'`). |
@@ -74,12 +79,15 @@ Outside `/api`: `/connect`, `/.well-known/jwks.json`, `/healthz`, `/developers.m
 
 - shadcn-vue in `app/components/ui`, auto-registered without prefix (`<Button>`, `<Card>`, …): button
   (extra variants `chunky` and `gem` with the press shadow), card, input, label, dialog, dropdown-menu,
-  avatar, badge, tooltip, tabs, table, skeleton, sonner, separator, sheet, scroll-area. Add more with
+  avatar, badge, tooltip, tabs, table, skeleton, sonner, separator, sheet, scroll-area, slider, progress. Add more with
   `bunx --bun shadcn-vue@latest add <name>`; it writes to `./components/ui` at the repo root, so move the
   folder into `app/components/ui` and replace the `"cn"` import with `"@/lib/utils"` and `"@lucide/vue"`
   with `"lucide-vue-next"` (then `bun remove cn @lucide/vue` if it added them).
 - `app/components/pnx/` (used as `<PnxGemChip>` etc.), deliberately plain: `GemGlyph`, `StarGlyph`,
-  `GemChip` (`amount`, `compact`), `StarChip` (`count`), `StarTrack` (`levels`, `stars`, `best`: filled up to
+  `GemChip` (`amount`, `compact`), `StarChip` (`count`), `PlayerAvatar` (`name`, `image`, `emblem`, `prestige`:
+  the one avatar; emblem, else image, else initial, with the rotating tier ring when `prestige > 0`),
+  `PrestigeBadge` (`prestige`, `size`: the roman numeral next to a name, tier name in a tooltip),
+  `EmblemSvg` (`data`), `EmblemEditor` (`v-model`, `busy`, `@save`), `StarTrack` (`levels`, `stars`, `best`: filled up to
   the current level, outlined up to the best, names in tooltips), `AppHeader`.
 - Tailwind tokens: `bg-gem`, `text-gem`, `bg-star`, `text-star`, `text-star-foreground`, `bg-coin`,
   `bg-success`, plus the shadcn set; fonts `font-display`, `font-sans`, `font-mono`; utility `tabular`.
@@ -89,7 +97,7 @@ Outside `/api`: `/connect`, `/.well-known/jwks.json`, `/healthz`, `/developers.m
 
 Built (minimal, restyle them): `/login`, `/register`, `/reset-password`, `/` (player card with the claim
 pile + game sections), `/leaderboard`, `/play/[slug]` (sandboxed iframe shell with a slim top bar, the
-bridge, relaunch and "open in new tab"), `/settings` (name and avatar), `/settings/developer` (tokens:
+bridge, relaunch and "open in new tab"), `/settings` (name and avatar), `/settings/emblem` (emblem editor and saved history), `/settings/developer` (tokens:
 create, list, revoke), `/developers` (flow, two steps, the agent brief with a copy button), `/gems` (plain
 history table), `/admin/apps` (apps, verify, keys, reset links).
 

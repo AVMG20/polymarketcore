@@ -19,6 +19,10 @@ export interface Me {
     name: string
     email: string
     image: string | null
+    /** Serialized emblem (shared/emblem.ts), shown before `image`. */
+    emblem: string | null
+    /** Ring tier 0-4 (shared/prestige.ts). */
+    prestige: number
     gems: number
     stars: number
     title: TitleName
@@ -107,6 +111,10 @@ export interface PlayerRef {
     id: string
     name: string
     image: string | null
+    /** Serialized emblem (shared/emblem.ts): the avatar, before `image` and the initial. */
+    emblem: string | null
+    /** Ring tier 0-4 around the avatar (shared/prestige.ts). */
+    prestige: number
 }
 
 /** `GET /api/games/:slug`. */
@@ -184,6 +192,25 @@ export interface FeedResponse {
     events: FeedEvent[]
 }
 
+/** One saved emblem. */
+export interface EmblemHistoryEntry {
+    id: string
+    emblem: string
+    createdAt: string
+}
+
+/** `GET /api/me/emblem/history`: the viewer's saved emblems, newest first. */
+export interface EmblemHistoryResponse {
+    entries: EmblemHistoryEntry[]
+}
+
+/** `PUT /api/me/emblem` `{ emblem }` (null clears it). */
+export interface SaveEmblemResponse {
+    emblem: string | null
+    /** The history row of this save, null when clearing. */
+    historyId: string | null
+}
+
 /** `GET /api/play/:slug/launch`. */
 export interface LaunchResponse {
     /** iframe src with the launch token in `#pnx`. */
@@ -204,7 +231,7 @@ export interface AppInfo {
     /** Set by an admin. Unverified: no star bounties, stars don't count, spends capped per player per day. */
     verified: boolean
     verifiedAt: string | null
-    owner: PlayerRef | null
+    owner: { id: string, name: string, image: string | null } | null
     createdAt: string
     /** Games declared by the app's manifest (retired ones included). */
     games: number

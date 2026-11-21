@@ -15,7 +15,7 @@ const down = computed(() => props.event.type === 'star' && p.value.direction ===
 <template>
     <li class="flex items-start gap-3 py-3">
         <NuxtLink v-if="!hidePlayer" :to="`/players/${event.player.id}`" class="shrink-0" :aria-label="event.player.name">
-            <PnxPlayerAvatar :name="event.player.name" :image="event.player.image" class="size-9" />
+            <PnxPlayerAvatar :name="event.player.name" :image="event.player.image" :emblem="event.player.emblem" :prestige="event.player.prestige" class="size-9" />
         </NuxtLink>
         <span
             v-else

@@ -28,10 +28,15 @@ export const user = pgTable('user', {
     claimedThrough: date('claimed_through', { mode: 'string' }),
     // Flipped by the one request that pays STARTER_GEMS (server/utils/welcome.ts).
     welcomeGranted: boolean('welcome_granted').notNull().default(false),
+    // The player's drawn avatar: a serialized EmblemData (shared/emblem.ts), written by server/utils/emblem.ts.
+    emblem: text('emblem'),
+    // Ring tier 0-4 around the avatar (shared/prestige.ts). Display only.
+    prestige: integer('prestige').notNull().default(0),
     createdAt: createdAt(),
     updatedAt: updatedAt()
 }, table => [
-    check('user_gems_non_negative', sql`${table.gems} >= 0`)
+    check('user_gems_non_negative', sql`${table.gems} >= 0`),
+    check('user_prestige_range', sql`${table.prestige} between 0 and 4`)
 ])
 
 export const session = pgTable('session', {
@@ -223,6 +228,14 @@ export const signingKeys = pgTable('signing_keys', {
     retiredAt: timestamp('retired_at', { withTimezone: true }),
     createdAt: createdAt()
 })
+
+/** Every emblem a player saved, newest kept up to EMBLEM_HISTORY_LIMIT (server/utils/emblem.ts). */
+export const emblemHistory = pgTable('emblem_history', {
+    id: uuid(),
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    emblem: text('emblem').notNull(),
+    createdAt: createdAt()
+}, table => [index('emblem_history_user_created_idx').on(table.userId, table.createdAt)])
 
 /** The public activity feed. */
 export const activityEvents = pgTable('activity_events', {

@@ -36,9 +36,12 @@ useHead({ title: () => `${player.value?.name ?? 'Player'} · Polynux` })
             <Card class="gap-5">
                 <CardContent class="space-y-5">
                     <div class="flex items-center gap-4">
-                        <PnxPlayerAvatar :name="player.name" :image="player.image" class="size-16 text-2xl" />
+                        <PnxPlayerAvatar :name="player.name" :image="player.image" :emblem="player.emblem" :prestige="player.prestige" class="size-16 text-2xl" />
                         <div class="min-w-0 flex-1">
-                            <h1 class="truncate text-2xl sm:text-3xl">{{ player.name }}</h1>
+                            <div class="flex min-w-0 items-center gap-2">
+                                <h1 class="truncate text-2xl sm:text-3xl">{{ player.name }}</h1>
+                                <PnxPrestigeBadge :prestige="player.prestige" size="md" />
+                            </div>
                             <p class="text-sm text-muted-foreground">
                                 <template v-if="player.rank">Rank <span class="tabular font-semibold text-foreground">#{{ player.rank }}</span> · </template>Joined {{ joined }}
                             </p>

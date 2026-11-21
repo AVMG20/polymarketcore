@@ -23,6 +23,8 @@ export default defineEventHandler(async (event): Promise<Me> => {
         name: row.name,
         email: row.email,
         image: row.image,
+        emblem: row.emblem,
+        prestige: row.prestige,
         gems: row.gems,
         stars,
         title: titleFor(stars),

@@ -22,6 +22,9 @@ import { countedGame, gameCounts } from '#server/utils/stars'
 
 const iso = (d: Date | string | null | undefined) => (d ? new Date(d).toISOString() : null)
 
+/** The user columns of a PlayerRef: everything a name and avatar need. */
+const playerColumns = { id: user.id, name: user.name, image: user.image, emblem: user.emblem, prestige: user.prestige }
+
 export interface Viewer {
     id: string
     admin: boolean
@@ -101,7 +104,7 @@ export async function getGameDetail(slug: string, viewer: Viewer | null): Promis
     if (!game) throw createError({ statusCode: 404, statusMessage: 'Game not found' })
 
     const [top, recent] = await Promise.all([
-        db.select({ id: user.id, name: user.name, image: user.image, stars: playerStars.stars, best: playerStars.bestStars })
+        db.select({ ...playerColumns, stars: playerStars.stars, best: playerStars.bestStars })
             .from(playerStars)
             .innerJoin(user, eq(user.id, playerStars.userId))
             .where(and(eq(playerStars.game, slug), gte(playerStars.stars, 1)))
@@ -120,6 +123,8 @@ interface RankedRow {
     id: string
     name: string
     image: string | null
+    emblem: string | null
+    prestige: number
 }
 
 /** Totals per player over counted games; `held_since` is their last level change there. */
@@ -147,7 +152,7 @@ const totalsCte = () => sql`
 export async function getLeaderboard(viewerId: string | null, limit = 100, offset = 0): Promise<LeaderboardResponse> {
     const result = await db.execute<RankedRow & Record<string, unknown>>(sql`
         with ${totalsCte()}
-        select r.rank, r.total, r.stars, r.held_since, u.id, u.name, u.image
+        select r.rank, r.total, r.stars, r.held_since, u.id, u.name, u.image, u.emblem, u.prestige
         from ranked r
         join ${user} u on u.id = r.user_id
         where (r.rank > ${offset} and r.rank <= ${offset + limit}) or r.user_id = ${viewerId ?? ''}
@@ -171,6 +176,8 @@ export async function getLeaderboard(viewerId: string | null, limit = 100, offse
             id: r.id,
             name: r.name,
             image: r.image,
+            emblem: r.emblem,
+            prestige: r.prestige,
             stars: r.stars,
             title: titleFor(r.stars),
             heldSince: iso(r.held_since)!,
@@ -195,7 +202,7 @@ export async function getRank(userId: string): Promise<number | null> {
 }
 
 export async function getPlayerProfile(playerId: string): Promise<PlayerProfileResponse> {
-    const [player] = await db.select({ id: user.id, name: user.name, image: user.image, createdAt: user.createdAt })
+    const [player] = await db.select({ ...playerColumns, createdAt: user.createdAt })
         .from(user).where(eq(user.id, playerId))
     if (!player) throw createError({ statusCode: 404, statusMessage: 'Player not found' })
 
@@ -238,6 +245,8 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfileR
             id: player.id,
             name: player.name,
             image: player.image,
+            emblem: player.emblem,
+            prestige: player.prestige,
             stars: total,
             title: titleFor(total),
             nextTitle: nextTitle(total),
@@ -256,9 +265,7 @@ export async function getFeed(options: { before?: Date, limit?: number, userId?:
         type: activityEvents.type,
         payload: activityEvents.payload,
         createdAt: activityEvents.createdAt,
-        userId: user.id,
-        name: user.name,
-        image: user.image
+        player: playerColumns
     })
         .from(activityEvents)
         .innerJoin(user, eq(user.id, activityEvents.userId))
@@ -272,7 +279,7 @@ export async function getFeed(options: { before?: Date, limit?: number, userId?:
     return rows.map(r => ({
         id: r.id,
         type: r.type,
-        player: { id: r.userId, name: r.name, image: r.image },
+        player: r.player,
         payload: r.payload,
         createdAt: iso(r.createdAt)!
     }))

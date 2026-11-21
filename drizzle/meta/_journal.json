@@ -36,6 +36,13 @@
       "when": 1795254499851,
       "tag": "0004_awesome_kate_bishop",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795271148017,
+      "tag": "0005_acoustic_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

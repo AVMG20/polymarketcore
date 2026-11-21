@@ -14,7 +14,7 @@ const feedPreview = computed(() => (feed.value?.events ?? []).slice(0, 6))
 <template>
     <div v-if="me" class="space-y-8">
         <div class="flex items-center gap-3">
-            <PnxPlayerAvatar :name="me.name" :image="me.image" class="size-12" />
+            <PnxPlayerAvatar :name="me.name" :image="me.image" :emblem="me.emblem" :prestige="me.prestige" class="size-12" />
             <div class="min-w-0">
                 <h1 class="truncate text-2xl sm:text-3xl">Hi {{ me.name }}</h1>
                 <p class="text-sm text-muted-foreground">Ready for another star?</p>
