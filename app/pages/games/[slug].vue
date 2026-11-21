@@ -92,15 +92,19 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                                 :class="level.position <= current ? 'bg-star/10' : ''"
                             >
                                 <span
-                                    class="tabular flex size-9 shrink-0 items-center justify-center rounded-xl border text-sm font-bold"
+                                    class="tabular flex h-9 w-12 shrink-0 items-center justify-center gap-0.5 rounded-xl border text-sm font-bold"
                                     :class="level.position <= current ? 'border-star bg-star text-star-foreground' : level.position <= best ? 'border-star/70 bg-star/15' : 'bg-muted text-muted-foreground'"
-                                >{{ level.position }}</span>
+                                    :aria-label="`Star ${level.position}`"
+                                ><PnxStarGlyph class="size-3.5" :class="level.position <= current ? '' : level.position <= best ? 'text-star' : 'opacity-60'" />{{ level.position }}</span>
                                 <div class="min-w-0 flex-1">
                                     <p class="font-semibold leading-tight">{{ level.name }}</p>
                                     <p v-if="level.description" class="text-sm text-muted-foreground">{{ level.description }}</p>
                                 </div>
                                 <div class="flex shrink-0 flex-col items-end gap-1">
-                                    <PnxGemChip v-if="level.bounty > 0 && game.app.verified" :amount="level.bounty" size="sm" />
+                                    <span v-if="level.bounty > 0 && game.app.verified" class="flex items-center gap-1.5 text-xs text-muted-foreground" :title="`First time you reach this level: +${level.bounty} gems`">
+                                        {{ level.position <= best ? 'Earned' : 'Reward' }}
+                                        <PnxGemChip :amount="level.bounty" size="sm" :class="level.position <= best ? 'opacity-50' : ''" />
+                                    </span>
                                     <span class="tabular text-xs text-muted-foreground">{{ level.holders }} {{ level.holders === 1 ? 'player' : 'players' }}</span>
                                 </div>
                             </li>
