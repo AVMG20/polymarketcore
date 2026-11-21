@@ -1,10 +1,10 @@
-import { and, eq, inArray, or } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { createError } from 'h3'
 import { z } from 'zod'
 import { db } from '#server/database/index'
 import { apps, games, user } from '#server/database/schema'
 import { SLUG_PATTERN } from '#server/utils/manifest'
-import type { Viewer } from '#server/utils/hub'
+import { gameListedTo, type Viewer } from '#server/utils/hub'
 
 /** Most slugs a saved game order holds. */
 export const GAME_ORDER_MAX = 200
@@ -28,7 +28,7 @@ export async function saveGameOrder(viewer: Viewer, order: string[]): Promise<st
             .innerJoin(apps, eq(apps.id, games.appId))
             .where(and(
                 inArray(games.slug, unique),
-                viewer.admin ? undefined : or(eq(games.visibility, 'public'), eq(apps.ownerUserId, viewer.id))
+                gameListedTo(viewer)
             ))
         const seen = new Set(known.map(k => k.slug))
         const unknown = unique.find(slug => !seen.has(slug))

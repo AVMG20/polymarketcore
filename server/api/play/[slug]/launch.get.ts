@@ -9,8 +9,8 @@ import type { LaunchResponse } from '#shared/types/api'
 
 /**
  * Flow A (contract §1): the iframe URL for a game with a fresh launch token in
- * the hash, and a `/connect` path to open it in its own tab. Drafts launch
- * only for the app owner and admins.
+ * the hash, and a `/connect` path to open it in its own tab. Drafts and games
+ * of unverified apps launch only for the app owner and admins.
  */
 export default defineEventHandler(async (event): Promise<LaunchResponse> => {
     const u = await requireUser(event)
@@ -19,7 +19,7 @@ export default defineEventHandler(async (event): Promise<LaunchResponse> => {
         .from(games)
         .innerJoin(apps, eq(apps.id, games.appId))
         .where(and(eq(games.slug, slug), isNull(games.retiredAt), eq(apps.status, 'active')))
-    const allowed = row && (row.game.visibility === 'public' || row.app.ownerUserId === u.id || isAdmin(u))
+    const allowed = row && ((row.game.visibility === 'public' && row.app.verified) || row.app.ownerUserId === u.id || isAdmin(u))
     if (!row || !allowed) throw createError({ statusCode: 404, statusMessage: 'Game not found' })
 
     const token = await launchTokenFor(u.id, row.app.id)

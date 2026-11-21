@@ -43,8 +43,8 @@ Price guide for apps (players earn 10 gems a day): small boost 3-5 gems, meaning
 
 ## Trust: verification, drafts, connections
 
-- **Verified apps.** Only an admin verifies an app. Unverified apps' games are playable and listed in a
-  "New" section, but their star levels don't count toward totals, titles or the leaderboard, they pay no
+- **Verified apps.** Only an admin verifies an app. Unverified apps' games are listed and playable only for
+  the app owner (and admins); verifying lists their public games for everyone. Their star levels don't count toward totals, titles or the leaderboard, they pay no
   bounties, and they may spend at most `UNVERIFIED_DAILY_SPEND_CAP` gems per player per Amsterdam day
   (400 beyond it). Levels and bests are stored; when the app is verified, earned bounties are paid once.
 - **What counts.** Only games that are `public`, not retired, of an `active` and verified app count toward

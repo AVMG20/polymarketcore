@@ -19,7 +19,7 @@ platform is in `docs/platform-contract.md`.
 Players get 50 gems once and 10 a day into a claim pile that holds at most 100 ("x / 100 ready, full in N
 days"). Each game gives each player a **star level from 0 to 10** that can go down; the player's total is the
 sum of current levels in games that **count** (public, verified app, not retired). Titles follow the total and
-can drop. Games of **unverified** apps are playable in a "New" section but don't count. **Drafts** are only
+can drop. Games of **unverified** apps are listed and playable only for their owner (and admins) until an admin verifies the app. **Drafts** are only
 visible to their owner and admins. A game is "offline?" when its app hasn't called the hub for 24 h.
 
 ## Composables (`app/composables/`, auto-imported)

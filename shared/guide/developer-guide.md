@@ -255,7 +255,8 @@ your code (`https://github.com/me/my-game`), shown with your name on your game p
 
 ## 6. Verification, drafts and the economy
 
-- New apps are **unverified**. Their games are playable and listed under "New", but their stars don't count
+- New apps are **unverified**. Their games are listed and playable only for the app owner (and admins) until a
+  Polynux admin verifies the app; then its public games show up for everyone. Unverified stars don't count
   toward the leaderboard or titles, they pay no star bounties, and they may spend at most
   {{UNVERIFIED_DAILY_SPEND_CAP}} gems per player per day (Europe/Amsterdam; 400 beyond it). Levels and bests are
   stored; when a Polynux admin verifies the app, the earned bounties are paid once.

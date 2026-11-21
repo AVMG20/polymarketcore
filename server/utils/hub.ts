@@ -37,15 +37,21 @@ function isOffline(lastSeenAt: Date | null): boolean {
 }
 
 /**
- * Games of active apps that aren't retired: public ones for everyone, drafts
- * only for the app owner and admins. Verified apps first, then "New" ones.
+ * Who sees a game: everyone once it's public and its app is verified; before
+ * that only the app owner (and admins, who see everything).
+ */
+export function gameListedTo(viewer: Viewer | null): SQL | undefined {
+    if (viewer?.admin) return undefined
+    const listed = and(eq(games.visibility, 'public'), eq(apps.verified, true))
+    return viewer ? or(listed, eq(apps.ownerUserId, viewer.id)) : listed
+}
+
+/**
+ * Games of active apps that aren't retired, as `gameListedTo` allows. Verified
+ * apps first, then the viewer's own unverified ones.
  */
 export async function listGames(viewer: Viewer | null, filter: { slug?: string, ownerId?: string } = {}): Promise<GameSummary[]> {
-    const visible: SQL | undefined = viewer?.admin
-        ? undefined
-        : viewer
-            ? or(eq(games.visibility, 'public'), eq(apps.ownerUserId, viewer.id))
-            : eq(games.visibility, 'public')
+    const visible = gameListedTo(viewer)
     const rows = await db.select({ game: games, app: apps, owner: playerColumns })
         .from(games)
         .innerJoin(apps, eq(apps.id, games.appId))
@@ -296,7 +302,7 @@ export async function getPlayerProfile(playerId: string, viewer: Viewer | null =
             .from(playerStars)
             .innerJoin(games, eq(games.slug, playerStars.game))
             .innerJoin(apps, eq(apps.id, games.appId))
-            .where(and(eq(playerStars.userId, playerId), eq(games.visibility, 'public')))
+            .where(and(eq(playerStars.userId, playerId), eq(games.visibility, 'public'), eq(apps.verified, true)))
             .orderBy(desc(playerStars.stars), asc(games.name)),
         getRank(playerId),
         getFeed({ userId: playerId, limit: 10 }),
