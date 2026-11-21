@@ -25,18 +25,15 @@ const tracks = (e: LeaderboardEntry) => columns.value.filter(g => (e.games[g.slu
 
 <template>
     <div class="space-y-5">
-        <div>
-            <h1 class="text-3xl">Leaderboard</h1>
-            <p class="text-sm text-muted-foreground">Total of your current star levels. Ties go to whoever held their total longest.</p>
-        </div>
+        <h1 class="text-3xl">Leaderboard</h1>
 
         <ul v-if="pending && !data" class="space-y-2" aria-hidden="true">
             <li v-for="i in 6" :key="i"><Skeleton class="h-16 rounded-2xl" /></li>
         </ul>
-        <PnxStateBlock v-else-if="error" :icon="TriangleAlert" tone="error" title="Couldn't load the leaderboard" text="Check your connection and try again.">
+        <PnxStateBlock v-else-if="error" :icon="TriangleAlert" tone="error" title="Couldn't load the leaderboard">
             <Button variant="outline" @click="refresh()">Try again</Button>
         </PnxStateBlock>
-        <PnxStateBlock v-else-if="entries.length === 0" :icon="Trophy" title="Nobody has a star yet" text="Open a game and earn the first one.">
+        <PnxStateBlock v-else-if="entries.length === 0" :icon="Trophy" title="No players yet">
             <Button variant="chunky" as-child><NuxtLink to="/games">Pick a game</NuxtLink></Button>
         </PnxStateBlock>
 

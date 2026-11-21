@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkImageUrl, normalizeAppUrls, normalizeBaseUrl } from '#shared/app-urls'
+import { checkImageUrl, checkRepoUrl, isGithubUrl, normalizeAppUrls, normalizeBaseUrl } from '#shared/app-urls'
 
 const dev = { production: false }
 const prod = { production: true }
@@ -36,5 +36,26 @@ describe('app URLs', () => {
         expect(checkImageUrl('http://cdn.x.com/i.png', 'cover')).toMatchObject({ ok: false, error: expect.stringContaining('https') })
         expect(checkImageUrl('http://localhost:3300/i.png', 'icon')).toMatchObject({ ok: true })
         expect(checkImageUrl('javascript:alert(1)', 'icon')).toMatchObject({ ok: false })
+    })
+
+    it('accepts https repo URLs only, in any environment', () => {
+        expect(checkRepoUrl('https://github.com/me/my-game')).toEqual({ ok: true, url: 'https://github.com/me/my-game' })
+        expect(checkRepoUrl(' https://GitLab.com/me/game/-/tree/main?ref=x ')).toEqual({ ok: true, url: 'https://gitlab.com/me/game/-/tree/main?ref=x' })
+        expect(checkRepoUrl('http://github.com/me/my-game')).toEqual({ ok: false, error: 'repoUrl must be an https URL like https://github.com/me/my-game' })
+        expect(checkRepoUrl('http://localhost:3000/repo')).toMatchObject({ ok: false })
+        expect(checkRepoUrl('javascript:alert(1)')).toMatchObject({ ok: false, error: expect.stringContaining('repoUrl') })
+        expect(checkRepoUrl('git@github.com:me/my-game.git')).toMatchObject({ ok: false })
+        expect(checkRepoUrl('https://u:p@github.com/me/x')).toMatchObject({ ok: false })
+        expect(checkRepoUrl('https://github.com/me/x#readme')).toMatchObject({ ok: false })
+        expect(checkRepoUrl('github.com/me/x')).toEqual({ ok: false, error: 'repoUrl must be an absolute URL like https://github.com/me/my-game' })
+        expect(checkRepoUrl(`https://github.com/${'a'.repeat(500)}`)).toMatchObject({ ok: false, error: expect.stringContaining('500') })
+    })
+
+    it('tells GitHub repos apart', () => {
+        expect(isGithubUrl('https://github.com/me/x')).toBe(true)
+        expect(isGithubUrl('https://www.github.com/me/x')).toBe(true)
+        expect(isGithubUrl('https://gitlab.com/me/x')).toBe(false)
+        expect(isGithubUrl('https://github.com.evil.com/me/x')).toBe(false)
+        expect(isGithubUrl('not a url')).toBe(false)
     })
 })

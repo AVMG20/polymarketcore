@@ -55,7 +55,7 @@ reference game must stay in step with it.
   `launch.ts`, `hub.ts` (read models), `rate-limit.ts`, `openapi.ts`, `developer-docs.ts`, `auth.ts`, `validate.ts`,
   `csrf.ts`, `bootstrap-apps.ts`, `emblem.ts` (save, trim and list emblem history)
 - `shared/`: code for client and server. `economy.ts` (constants, titles, bounties, the claim pile,
-  Amsterdam days), `app-urls.ts` (base/return/image URL rules), `return-url.ts`, `random.ts`,
+  Amsterdam days), `app-urls.ts` (base/return/image/repo URL rules), `return-url.ts`, `random.ts`,
   `gem-history.ts`, `emblem.ts` (the drawn avatar: format, limits, `serializeEmblem`), `prestige.ts`
   (ring tiers 0-4, display only), `developer-guide.ts` + `guide/developer-guide.md` (the one source of `/developers.md`
   and the `/developers` copy block), `types/api.ts` (every session API response shape)

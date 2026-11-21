@@ -4,6 +4,7 @@ import { db } from '#server/database/index'
 import { activityEvents, apps, games, gameStars, playerStars, user } from '#server/database/schema'
 import { APP_OFFLINE_AFTER_HOURS, nextTitle, starBounty, titleFor } from '#shared/economy'
 import type {
+    AdminPlayersResponse,
     FeedEvent,
     GameDetailResponse,
     GameSummary,
@@ -38,16 +39,23 @@ function isOffline(lastSeenAt: Date | null): boolean {
  * Games of active apps that aren't retired: public ones for everyone, drafts
  * only for the app owner and admins. Verified apps first, then "New" ones.
  */
-export async function listGames(viewer: Viewer | null, onlySlug?: string): Promise<GameSummary[]> {
+export async function listGames(viewer: Viewer | null, filter: { slug?: string, ownerId?: string } = {}): Promise<GameSummary[]> {
     const visible: SQL | undefined = viewer?.admin
         ? undefined
         : viewer
             ? or(eq(games.visibility, 'public'), eq(apps.ownerUserId, viewer.id))
             : eq(games.visibility, 'public')
-    const rows = await db.select({ game: games, app: apps })
+    const rows = await db.select({ game: games, app: apps, owner: playerColumns })
         .from(games)
         .innerJoin(apps, eq(apps.id, games.appId))
-        .where(and(isNull(games.retiredAt), eq(apps.status, 'active'), visible, onlySlug ? eq(games.slug, onlySlug) : undefined))
+        .leftJoin(user, eq(user.id, apps.ownerUserId))
+        .where(and(
+            isNull(games.retiredAt),
+            eq(apps.status, 'active'),
+            visible,
+            filter.slug ? eq(games.slug, filter.slug) : undefined,
+            filter.ownerId ? eq(apps.ownerUserId, filter.ownerId) : undefined
+        ))
         .orderBy(desc(apps.verified), asc(games.position), asc(games.name))
     if (rows.length === 0) return []
     const slugs = rows.map(r => r.game.slug)
@@ -56,7 +64,7 @@ export async function listGames(viewer: Viewer | null, onlySlug?: string): Promi
         db.select().from(gameStars)
             .where(and(inArray(gameStars.game, slugs), isNull(gameStars.retiredAt)))
             .orderBy(asc(gameStars.position)),
-        // Players per (game, current level), to count holders of each level.
+        // Players per (game, current level), to count holders of each level and players with a star.
         db.select({ game: playerStars.game, stars: playerStars.stars, n: count() })
             .from(playerStars)
             .where(and(inArray(playerStars.game, slugs), gte(playerStars.stars, 1)))
@@ -67,7 +75,7 @@ export async function listGames(viewer: Viewer | null, onlySlug?: string): Promi
     ])
 
     const myLevel = new Map(mine.map(m => [m.game, m]))
-    return rows.map(({ game, app }) => {
+    return rows.map(({ game, app, owner }) => {
         const atLevel = levelRows.filter(l => l.game === game.slug)
         const defs = levels.filter(s => s.game === game.slug).map(s => ({
             key: s.key,
@@ -79,6 +87,8 @@ export async function listGames(viewer: Viewer | null, onlySlug?: string): Promi
         }))
         const m = myLevel.get(game.slug)
         return {
+            createdAt: game.createdAt.toISOString(),
+            players: atLevel.reduce((sum, l) => sum + l.n, 0),
             slug: game.slug,
             name: game.name,
             tagline: game.tagline,
@@ -91,7 +101,14 @@ export async function listGames(viewer: Viewer | null, onlySlug?: string): Promi
             visibility: game.visibility,
             counts: gameCounts(game, app),
             offline: isOffline(app.lastSeenAt),
-            app: { id: app.id, name: app.name, origin: appOrigin(app.baseUrl), verified: app.verified },
+            app: {
+                id: app.id,
+                name: app.name,
+                origin: appOrigin(app.baseUrl),
+                verified: app.verified,
+                repoUrl: app.repoUrl,
+                owner: owner?.id ? owner : null
+            },
             stars: defs,
             maxStars: defs.length,
             me: m ? { stars: m.stars, best: m.bestStars } : null
@@ -100,7 +117,7 @@ export async function listGames(viewer: Viewer | null, onlySlug?: string): Promi
 }
 
 export async function getGameDetail(slug: string, viewer: Viewer | null): Promise<GameDetailResponse> {
-    const [game] = await listGames(viewer, slug)
+    const [game] = await listGames(viewer, { slug })
     if (!game) throw createError({ statusCode: 404, statusMessage: 'Game not found' })
 
     const [top, recent] = await Promise.all([
@@ -127,7 +144,13 @@ interface RankedRow {
     prestige: number
 }
 
-/** Totals per player over counted games; `held_since` is their last level change there. */
+type PlayerRow = Pick<RankedRow, 'id' | 'name' | 'image' | 'emblem' | 'prestige'>
+
+/**
+ * `totals`: stars per player over counted games; `held_since` is their last level change there.
+ * `ranked`: every player, most stars first; ties go to whoever has held their total longest
+ * (players without stars: whoever joined first).
+ */
 const totalsCte = () => sql`
     totals as (
         select ps.user_id, sum(ps.stars)::int as stars, max(ps.updated_at) as held_since
@@ -137,17 +160,21 @@ const totalsCte = () => sql`
         where g.visibility = 'public' and g.retired_at is null and a.status = 'active' and a.verified
         group by ps.user_id
         having sum(ps.stars) > 0
+    ), board as (
+        select u.id as user_id, coalesce(t.stars, 0)::int as stars, coalesce(t.held_since, u.created_at) as held_since
+        from ${user} u
+        left join totals t on t.user_id = u.id
     ), ranked as (
-        select t.*,
-               (row_number() over (order by t.stars desc, t.held_since asc, t.user_id asc))::int as rank,
+        select b.*,
+               (row_number() over (order by b.stars desc, b.held_since asc, b.user_id asc))::int as rank,
                (count(*) over ())::int as total
-        from totals t
+        from board b
     )`
 
 /**
- * Players ranked by the sum of their current levels in counted games; ties
- * go to whoever has held their total longest. Two queries: the ranked page
- * (plus the viewer's own row) and the per-game levels for those players.
+ * Every player, ranked by the sum of their current levels in counted games
+ * (see `ranked`). Two queries: the page (plus the viewer's own row) and the
+ * per-game levels for those players.
  */
 export async function getLeaderboard(viewerId: string | null, limit = 100, offset = 0): Promise<LeaderboardResponse> {
     const result = await db.execute<RankedRow & Record<string, unknown>>(sql`
@@ -189,24 +216,64 @@ export async function getLeaderboard(viewerId: string | null, limit = 100, offse
     const mine = viewerId ? rows.find(r => r.id === viewerId) : undefined
     let total = rows[0]?.total
     if (total === undefined) {
-        const counted = await db.execute<{ n: number }>(sql`with ${totalsCte()} select count(*)::int as n from totals`)
+        const counted = await db.execute<{ n: number }>(sql`select count(*)::int as n from ${user}`)
         total = counted.rows[0]?.n ?? 0
     }
     return { entries: inPage.map(toEntry), total, me: mine ? toEntry(mine) : null }
 }
 
-/** The player's leaderboard rank, or null without counted stars. */
+/** Admin player list: name or email search, newest first. Stars are the counted total. */
+export async function listPlayersForAdmin(options: { q?: string, limit: number, offset: number }): Promise<AdminPlayersResponse> {
+    const term = options.q?.trim()
+    // Escape LIKE wildcards so a search for "%" or "_" matches literally.
+    const like = term ? `%${term.replace(/[\\%_]/g, m => `\\${m}`)}%` : null
+    const filter = like ? sql`where u.name ilike ${like} or u.email ilike ${like}` : sql``
+    const result = await db.execute<AdminPlayerRow & Record<string, unknown>>(sql`
+        with ${totalsCte()}
+        select u.id, u.name, u.email, u.image, u.emblem, u.prestige, u.gems, u.created_at,
+               coalesce(t.stars, 0)::int as stars, (count(*) over ())::int as total
+        from ${user} u
+        left join totals t on t.user_id = u.id
+        ${filter}
+        order by u.created_at desc, u.id
+        limit ${options.limit} offset ${options.offset}
+    `)
+    return {
+        total: result.rows[0]?.total ?? 0,
+        players: result.rows.map(r => ({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            image: r.image,
+            emblem: r.emblem,
+            prestige: r.prestige,
+            gems: r.gems,
+            stars: r.stars,
+            createdAt: iso(r.created_at)!
+        }))
+    }
+}
+
+interface AdminPlayerRow extends PlayerRow {
+    email: string
+    gems: number
+    stars: number
+    total: number
+    created_at: Date
+}
+
+/** The player's leaderboard rank (null only for an unknown player). */
 export async function getRank(userId: string): Promise<number | null> {
     const result = await db.execute<{ rank: number }>(sql`with ${totalsCte()} select rank from ranked where user_id = ${userId}`)
     return result.rows[0]?.rank ?? null
 }
 
-export async function getPlayerProfile(playerId: string): Promise<PlayerProfileResponse> {
+export async function getPlayerProfile(playerId: string, viewer: Viewer | null = null): Promise<PlayerProfileResponse> {
     const [player] = await db.select({ ...playerColumns, createdAt: user.createdAt })
         .from(user).where(eq(user.id, playerId))
     if (!player) throw createError({ statusCode: 404, statusMessage: 'Player not found' })
 
-    const [levels, rank, recent] = await Promise.all([
+    const [levels, rank, recent, made] = await Promise.all([
         db.select({ ps: playerStars, game: games, app: apps })
             .from(playerStars)
             .innerJoin(games, eq(games.slug, playerStars.game))
@@ -214,7 +281,8 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfileR
             .where(and(eq(playerStars.userId, playerId), eq(games.visibility, 'public')))
             .orderBy(desc(playerStars.stars), asc(games.name)),
         getRank(playerId),
-        getFeed({ userId: playerId, limit: 10 })
+        getFeed({ userId: playerId, limit: 10 }),
+        listGames(viewer, { ownerId: playerId })
     ])
     const slugs = levels.map(l => l.game.slug)
     const defs = slugs.length
@@ -254,6 +322,7 @@ export async function getPlayerProfile(playerId: string): Promise<PlayerProfileR
             joinedAt: iso(player.createdAt)!
         },
         tracks,
+        games: made,
         recent
     }
 }

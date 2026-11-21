@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Copy, Package, TriangleAlert } from 'lucide-vue-next'
+import { Check, Code, Copy, Package, TriangleAlert } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -49,6 +49,26 @@ const confirmOpen = computed({
         if (!open) confirm.value = null
     }
 })
+// The repo URL: set or clear it (empty clears).
+const repoEdit = ref<AppInfo | null>(null)
+const repoText = ref('')
+function editRepo(app: AppInfo) {
+    repoText.value = app.repoUrl ?? ''
+    repoEdit.value = app
+}
+const repoOpen = computed({
+    get: () => !!repoEdit.value,
+    set: (open: boolean) => {
+        if (!open) repoEdit.value = null
+    }
+})
+async function saveRepo() {
+    const app = repoEdit.value
+    if (!app) return
+    const res = await update(app.id, { repoUrl: repoText.value.trim() || null })
+    if (res) repoEdit.value = null
+}
+
 async function runConfirm() {
     const c = confirm.value
     if (!c) return
@@ -60,13 +80,14 @@ async function runConfirm() {
 
 <template>
     <div class="space-y-6">
-        <h1 class="text-3xl">Apps</h1>
+        <h1 class="sr-only">Apps</h1>
+        <PnxAdminTabs />
 
         <Skeleton v-if="pending && apps.length === 0" class="h-40 rounded-2xl" />
-        <PnxStateBlock v-else-if="error && apps.length === 0" :icon="TriangleAlert" tone="error" title="Couldn't load the apps" text="Check your connection and try again.">
+        <PnxStateBlock v-else-if="error && apps.length === 0" :icon="TriangleAlert" tone="error" title="Couldn't load the apps">
             <Button variant="outline" @click="refresh()">Try again</Button>
         </PnxStateBlock>
-        <PnxStateBlock v-else-if="apps.length === 0" :icon="Package" title="No apps yet" text="Register one below, or have a player create one with a developer token." />
+        <PnxStateBlock v-else-if="apps.length === 0" :icon="Package" title="No apps yet" />
         <ul v-else class="grid gap-3 lg:grid-cols-2">
             <li v-for="app in apps" :key="app.id" class="space-y-3 rounded-2xl border bg-card p-4">
                 <div class="flex flex-wrap items-start gap-2">
@@ -83,6 +104,11 @@ async function runConfirm() {
                         <dt class="text-muted-foreground">Returns</dt>
                         <dd class="tabular break-all">{{ app.returnUrlPrefixes.join('  ') }}</dd>
                     </template>
+                    <dt class="text-muted-foreground">Repo</dt>
+                    <dd class="tabular break-all">
+                        <a v-if="app.repoUrl" :href="app.repoUrl" target="_blank" rel="noopener noreferrer nofollow" class="underline-offset-2 hover:underline">{{ app.repoUrl }}</a>
+                        <span v-else class="text-muted-foreground">none</span>
+                    </dd>
                     <dt class="text-muted-foreground">Owner</dt><dd>{{ app.owner?.name ?? 'none' }}</dd>
                     <dt class="text-muted-foreground">Games</dt><dd class="tabular">{{ app.games }}</dd>
                     <dt class="text-muted-foreground">Seen</dt><dd>{{ app.lastSeenAt ? timeAgo(app.lastSeenAt) : 'never' }}</dd>
@@ -90,6 +116,7 @@ async function runConfirm() {
                 <div class="flex flex-wrap gap-2">
                     <Button v-if="!app.verified" size="sm" variant="gem" :disabled="busy" @click="confirm = { kind: 'verify', app }">Verify</Button>
                     <Button size="sm" variant="outline" :disabled="busy" @click="rotateKey(app.id)">Rotate key</Button>
+                    <Button size="sm" variant="outline" :disabled="busy" @click="editRepo(app)"><Code /> Repo</Button>
                     <Button
                         v-if="app.status === 'active'"
                         size="sm"
@@ -133,15 +160,15 @@ async function runConfirm() {
         <Card>
             <CardHeader><CardTitle>Password reset link</CardTitle></CardHeader>
             <CardContent class="space-y-3">
-                <form class="flex flex-col gap-3 sm:flex-row sm:items-end" @submit.prevent="makeResetLink">
-                    <div class="flex-1 space-y-2">
-                        <Label for="reset-email">Player email</Label>
-                        <Input id="reset-email" v-model="resetEmail" type="email" required />
+                <form class="grid gap-2" @submit.prevent="makeResetLink">
+                    <Label for="reset-email">Player email</Label>
+                    <div class="flex items-center gap-2">
+                        <Input id="reset-email" v-model="resetEmail" type="email" class="flex-1" required />
+                        <Button type="submit" variant="outline" :disabled="busy">Create link</Button>
                     </div>
-                    <Button type="submit" variant="outline" :disabled="busy">Create link</Button>
                 </form>
                 <code v-if="resetUrl" class="block break-all rounded-xl bg-muted p-3 font-mono text-xs">{{ resetUrl }}</code>
-                <p v-if="resetUrl" class="text-xs text-muted-foreground">One use, valid for an hour. Send it to the player yourself.</p>
+                <p v-if="resetUrl" class="text-xs text-muted-foreground">1 use, 1 hour</p>
             </CardContent>
         </Card>
 
@@ -149,7 +176,7 @@ async function runConfirm() {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>API key for {{ revealedKey?.appId }}</DialogTitle>
-                    <DialogDescription>Copy it now. It is shown once and can't be retrieved again.</DialogDescription>
+                    <DialogDescription>Shown once. Copy it now.</DialogDescription>
                 </DialogHeader>
                 <code class="block break-all rounded-xl bg-muted p-3 font-mono text-sm">{{ revealedKey?.apiKey }}</code>
                 <Button variant="chunky" @click="revealedKey && copyText(revealedKey.apiKey)">
@@ -158,12 +185,31 @@ async function runConfirm() {
             </DialogContent>
         </Dialog>
 
+        <Dialog v-model:open="repoOpen">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Repo for {{ repoEdit?.name }}</DialogTitle>
+                    <DialogDescription>Empty clears it</DialogDescription>
+                </DialogHeader>
+                <form class="space-y-4" @submit.prevent="saveRepo">
+                    <div class="space-y-2">
+                        <Label for="app-repo">Repo URL</Label>
+                        <Input id="app-repo" v-model="repoText" type="url" placeholder="https://github.com/me/my-game" />
+                    </div>
+                    <DialogFooter class="gap-2">
+                        <Button type="button" variant="outline" @click="repoEdit = null">Cancel</Button>
+                        <Button type="submit" variant="chunky" :disabled="busy">Save</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
         <Dialog v-model:open="confirmOpen">
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{{ confirm?.kind === 'verify' ? 'Verify' : 'Disable' }} {{ confirm?.app.name }}?</DialogTitle>
-                    <DialogDescription v-if="confirm?.kind === 'verify'">Its stars start to count, and every outstanding star bounty is paid out once.</DialogDescription>
-                    <DialogDescription v-else>Its games stop launching until you enable it again.</DialogDescription>
+                    <DialogDescription v-if="confirm?.kind === 'verify'">Its stars count and bounties are paid out.</DialogDescription>
+                    <DialogDescription v-else>Its games stop launching.</DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <Button variant="outline" @click="confirm = null">Cancel</Button>

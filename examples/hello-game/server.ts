@@ -15,6 +15,8 @@ const HUB = (process.env.PNX_HUB_URL ?? 'http://localhost:3100').replace(/\/+$/,
 const APP_ID = process.env.PNX_APP_ID ?? ''
 const APP_KEY = process.env.PNX_APP_KEY ?? ''
 const GAME = process.env.PNX_GAME_SLUG || APP_ID
+// Optional: where this game's code lives (https), shown to players on its hub page.
+const REPO_URL = process.env.PNX_REPO_URL || undefined
 const PORT = Number(process.env.PORT ?? 3300)
 // 'none' when the app runs on a different site than the hub (SameSite=None; Secure; Partitioned).
 const SAMESITE = process.env.PNX_COOKIE_SAMESITE === 'none' ? 'none' : 'lax'
@@ -40,7 +42,9 @@ async function hub<T>(method: string, path: string, body?: unknown): Promise<T> 
 }
 
 // The game declares its levels once per boot. Level n is "what it takes to hold ★n".
+// Omitting repoUrl leaves the one set through the developer API as it is.
 await hub('PUT', '/manifest', {
+    repoUrl: REPO_URL,
     games: [{
         slug: GAME,
         name: 'Hello Game',

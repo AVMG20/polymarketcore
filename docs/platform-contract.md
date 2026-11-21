@@ -10,7 +10,8 @@ of the app side at `{CORE_URL}/developers.md` and an OpenAPI 3.1 spec at `{CORE_
 - **Hub / core**: `polymarketcore`. Owns accounts, login, the gem wallet, stars, the leaderboard, the
   activity feed and the game registry.
 - **App**: one deployment on one origin (`https://casino.avmg.nl`, `http://localhost:3200`). It has one
-  API key (`pnx_…`) and an owner (the player who registered it). An app hosts **one or more games**.
+  API key (`pnx_…`), an owner (the player who registered it) and optionally a `repoUrl` (where its code
+  lives). An app hosts **one or more games**. The hub shows the owner and the repo on the app's game pages.
 - **Game**: a playable thing listed in the hub. It belongs to one app, has a `slug` (globally unique,
   `[a-z0-9-]{2,40}`), a `playPath` on its app, a `visibility` (`draft` | `public`) and **0 to 10 star levels**.
 - **Star level**: a number from 0 to 10 per player and game: the game's current verdict on the player, set by
@@ -147,10 +148,12 @@ player not connected), 404, 409 (idempotency key reused with different params), 
 
 Declares this app's games and their star levels. Called by the app on boot (and on deploy). Upserts by slug.
 A slug owned by another app is 403. Games or stars missing from a later manifest are marked retired
-(never deleted).
+(never deleted). An optional top-level `repoUrl` sets the app's repo URL (the same field as in §2a; `null`
+clears it, omitted leaves it as it is).
 
 ```json
 {
+  "repoUrl": "https://github.com/me/polynux-casino",
   "games": [
     {
       "slug": "casino",
@@ -238,19 +241,21 @@ else an app needs is available here, so a coding agent can do it end to end.
 | Call | Body | Response |
 |---|---|---|
 | `GET /apps` | | `{ apps: App[] }` (the caller's apps) |
-| `POST /apps` | `{ id, name, baseUrl, returnUrlPrefixes? }` | 201 `{ app, apiKey }` (key shown once) |
+| `POST /apps` | `{ id, name, baseUrl, returnUrlPrefixes?, repoUrl? }` | 201 `{ app, apiKey }` (key shown once) |
 | `GET /apps/:id` | | `{ app }` |
-| `PATCH /apps/:id` | `{ name?, baseUrl?, returnUrlPrefixes? }` | `{ app }` |
+| `PATCH /apps/:id` | `{ name?, baseUrl?, returnUrlPrefixes?, repoUrl? }` | `{ app }` |
 | `POST /apps/:id/rotate-key` | | `{ app, apiKey }` (old key stops at once) |
 | `DELETE /apps/:id` | | `{ app }` (disabled, never deleted) |
 | `GET /apps/:id/games` | | `{ app, games: [{ slug, name, visibility, counts, retired, playUrl, stars: [...] }] }` |
 | `POST /apps/:id/test-launch` | `{ game? }` | `{ token, url, playerId, expiresIn }` |
 
-- `App` = `{ id, name, baseUrl, returnUrlPrefixes, status, verified, verifiedAt, owner, createdAt, games, lastSeenAt }`.
+- `App` = `{ id, name, baseUrl, returnUrlPrefixes, repoUrl, status, verified, verifiedAt, owner, createdAt, games, lastSeenAt }`.
 - `id` is a slug (`[a-z0-9-]{2,40}`). At most 5 active apps per player. New apps are unverified.
 - `baseUrl`: http(s), parsed and normalised (no trailing slash, no query or fragment); https is required in
   production except for localhost. `returnUrlPrefixes` default to `["{baseUrl}/"]` and must share the
   `baseUrl` origin.
+- `repoUrl`: where the app's code lives, an https URL (any environment, at most 500 characters, no
+  credentials or fragment), or `null`. `null` (or `""`) clears it. The hub links it from the app's game pages.
 - `test-launch` mints a launch token for the token's owner (they become a connected test player) so an agent
   can exercise verify → session → spend → stars without a browser. Spends and sets against the owner follow
   the normal rules (real gems, the unverified cap, no bounty while unverified).

@@ -8,7 +8,7 @@ import { MAX_DEVELOPER_APPS, starBounty } from '#shared/economy'
 import type { AppInfo, DeveloperGame } from '#shared/types/api'
 import { generateApiKey, hashApiKey, type AppRow } from '#server/utils/apps'
 import { coreUrl } from '#server/utils/launch-token'
-import { SLUG_PATTERN } from '#server/utils/manifest'
+import { repoUrlField, SLUG_PATTERN } from '#server/utils/manifest'
 import { gameCounts } from '#server/utils/stars'
 
 /**
@@ -26,13 +26,15 @@ export const registerAppSchema = z.object({
     id: z.string({ error: 'id is required' }).regex(SLUG_PATTERN, 'id must match [a-z0-9-]{2,40} (lowercase letters, digits and dashes)'),
     name: z.string({ error: 'name is required' }).trim().min(1, 'name must not be empty').max(60, 'name must be at most 60 characters'),
     baseUrl: z.string({ error: 'baseUrl is required' }),
-    returnUrlPrefixes: urlList.optional()
+    returnUrlPrefixes: urlList.optional(),
+    repoUrl: repoUrlField.optional()
 })
 
 export const updateAppSchema = z.object({
     name: z.string().trim().min(1, 'name must not be empty').max(60, 'name must be at most 60 characters').optional(),
     baseUrl: z.string().optional(),
-    returnUrlPrefixes: urlList.optional()
+    returnUrlPrefixes: urlList.optional(),
+    repoUrl: repoUrlField.optional()
 })
 
 export const adminUpdateAppSchema = updateAppSchema.extend({
@@ -75,6 +77,7 @@ export function toAppInfo(app: AppRow, gameCount: number, owner: AppInfo['owner'
         name: app.name,
         baseUrl: app.baseUrl,
         returnUrlPrefixes: app.returnUrlPrefixes,
+        repoUrl: app.repoUrl,
         status: app.status,
         verified: app.verified,
         verifiedAt: app.verifiedAt ? app.verifiedAt.toISOString() : null,
@@ -97,6 +100,7 @@ export interface CreateAppInput {
     name: string
     baseUrl: string
     returnUrlPrefixes?: string[]
+    repoUrl?: string | null
     ownerUserId: string
     /** Enforce MAX_DEVELOPER_APPS active apps for the owner (developer API). */
     limitOwner: boolean
@@ -124,6 +128,7 @@ export async function registerApp(input: CreateAppInput): Promise<{ app: AppRow,
                 name: input.name,
                 baseUrl: urls.baseUrl,
                 returnUrlPrefixes: urls.returnUrlPrefixes,
+                repoUrl: input.repoUrl ?? null,
                 apiKeyHash: hashApiKey(apiKey),
                 ownerUserId: input.ownerUserId
             })
@@ -136,12 +141,13 @@ export async function registerApp(input: CreateAppInput): Promise<{ app: AppRow,
 }
 
 /**
- * Update name and URLs. A new baseUrl re-checks the stored prefixes against
+ * Update name, URLs and the repo URL (null clears it). A new baseUrl re-checks the stored prefixes against
  * its origin unless new prefixes come with it.
  */
-export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?: string, returnUrlPrefixes?: string[], status?: 'active' | 'disabled' }): Promise<AppRow> {
+export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?: string, returnUrlPrefixes?: string[], repoUrl?: string | null, status?: 'active' | 'disabled' }): Promise<AppRow> {
     const set: Partial<typeof apps.$inferInsert> = {}
     if (changes.name !== undefined) set.name = changes.name
+    if (changes.repoUrl !== undefined) set.repoUrl = changes.repoUrl
     if (changes.status !== undefined) set.status = changes.status
     if (changes.baseUrl !== undefined || changes.returnUrlPrefixes !== undefined) {
         const urls = urlsOrThrow(changes.baseUrl ?? app.baseUrl, changes.returnUrlPrefixes ?? app.returnUrlPrefixes)
@@ -149,7 +155,7 @@ export async function updateApp(app: AppRow, changes: { name?: string, baseUrl?:
         set.returnUrlPrefixes = urls.returnUrlPrefixes
     }
     if (Object.keys(set).length === 0) {
-        throw createError({ statusCode: 400, statusMessage: 'Nothing to update: send at least one of name, baseUrl, returnUrlPrefixes' })
+        throw createError({ statusCode: 400, statusMessage: 'Nothing to update: send at least one of name, baseUrl, returnUrlPrefixes, repoUrl' })
     }
     const [updated] = await db.update(apps).set(set).where(eq(apps.id, app.id)).returning()
     return updated!

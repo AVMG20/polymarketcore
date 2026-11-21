@@ -43,7 +43,7 @@ export function useAdminApps() {
         return res
     }
 
-    function update(appId: string, changes: Partial<Pick<AppInfo, 'name' | 'baseUrl' | 'returnUrlPrefixes' | 'status'>>) {
+    function update(appId: string, changes: Partial<Pick<AppInfo, 'name' | 'baseUrl' | 'returnUrlPrefixes' | 'repoUrl' | 'status'>>) {
         return act(() => apiFetch<{ app: AppInfo }>(`/api/admin/apps/${encodeURIComponent(appId)}`, { method: 'PATCH', body: changes }), 'Could not update the app')
     }
 

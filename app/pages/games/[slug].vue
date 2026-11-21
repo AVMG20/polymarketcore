@@ -30,10 +30,10 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
             <Skeleton class="h-44 rounded-3xl" />
             <Skeleton class="h-64 rounded-2xl" />
         </div>
-        <PnxStateBlock v-else-if="notFound" :icon="Gamepad2" title="Game not found" text="It may have been retired, or it is a draft only its owner can see.">
+        <PnxStateBlock v-else-if="notFound" :icon="Gamepad2" title="Game not found">
             <Button variant="outline" as-child><NuxtLink to="/games">All games</NuxtLink></Button>
         </PnxStateBlock>
-        <PnxStateBlock v-else-if="error || !game" :icon="TriangleAlert" tone="error" title="Couldn't load this game" text="Check your connection and try again.">
+        <PnxStateBlock v-else-if="error || !game" :icon="TriangleAlert" tone="error" title="Couldn't load this game">
             <Button variant="outline" @click="refresh()">Try again</Button>
         </PnxStateBlock>
 
@@ -53,7 +53,7 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                             <Badge v-if="game.offline" variant="outline" class="bg-background/70">offline?</Badge>
                         </div>
                         <p v-if="game.tagline" class="text-muted-foreground">{{ game.tagline }}</p>
-                        <p class="text-xs text-muted-foreground">by {{ game.app.name }}</p>
+                        <PnxGameMaker :app="game.app" class="pt-1" />
                     </div>
                     <div class="flex flex-col gap-2 sm:items-end">
                         <Button variant="chunky" size="lg" as-child>
@@ -64,9 +64,9 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                 </div>
             </section>
 
-            <p v-if="!game.counts && game.visibility === 'public'" class="flex items-start gap-2 rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                <TriangleAlert class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                This game isn't verified yet, so its stars don't count toward your total and pay no gem bounties.
+            <p v-if="!game.counts && game.visibility === 'public'" class="flex items-center gap-2 rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+                <TriangleAlert class="size-4 shrink-0" aria-hidden="true" />
+                Unverified: no star count, no bounties
             </p>
 
             <div class="grid gap-6 lg:grid-cols-3">
@@ -83,7 +83,7 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                                 <span class="tabular text-xs text-muted-foreground">★{{ current }}/{{ game.maxStars }}</span>
                             </div>
                         </div>
-                        <PnxStateBlock v-if="game.stars.length === 0" title="No star levels yet" text="This game hasn't declared any levels." />
+                        <PnxStateBlock v-if="game.stars.length === 0" title="No star levels" />
                         <ol v-else class="divide-y overflow-hidden rounded-2xl border bg-card">
                             <li
                                 v-for="level in game.stars"
@@ -125,7 +125,7 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                                 </NuxtLink>
                             </li>
                         </ol>
-                        <PnxStateBlock v-else title="No stars yet" text="Be the first on the board." />
+                        <PnxStateBlock v-else title="No stars yet" />
                     </section>
 
                     <section class="space-y-1">
@@ -133,7 +133,7 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                         <ul v-if="data?.recent.length" class="divide-y">
                             <PnxFeedItem v-for="e in data.recent" :key="e.id" :event="e" />
                         </ul>
-                        <p v-else class="py-4 text-sm text-muted-foreground">Nothing here yet.</p>
+                        <p v-else class="py-4 text-sm text-muted-foreground">Nothing yet</p>
                     </section>
                 </aside>
             </div>

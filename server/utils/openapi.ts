@@ -14,6 +14,7 @@ const int = (extra: Schema = {}): Schema => ({ type: 'integer', ...extra })
 const obj = (properties: Record<string, Schema>, required: string[] = Object.keys(properties)): Schema =>
     ({ type: 'object', properties, required, additionalProperties: false })
 const nullable = (s: Schema): Schema => ({ anyOf: [s, { type: 'null' }] })
+const repoUrlInput = nullable(str({ maxLength: 500, description: 'https URL of the code (e.g. https://github.com/me/my-game), shown on the game pages; null clears it' }))
 
 const json = (schema: Schema, description = 'OK') => ({ description, content: { 'application/json': { schema } } })
 const body = (schema: Schema) => ({ required: true, content: { 'application/json': { schema } } })
@@ -56,6 +57,7 @@ export function openApiSpec(hubUrl: string) {
                     name: str(),
                     baseUrl: str({ format: 'uri' }),
                     returnUrlPrefixes: { type: 'array', items: str({ format: 'uri' }) },
+                    repoUrl: nullable(str({ format: 'uri', description: 'Where the code lives; shown on the game pages' })),
                     status: str({ enum: ['active', 'disabled'] }),
                     verified: { type: 'boolean' },
                     verifiedAt: nullable(str({ format: 'date-time' })),
@@ -69,7 +71,8 @@ export function openApiSpec(hubUrl: string) {
                     id: str({ pattern: '^[a-z0-9-]{2,40}$' }),
                     name: str({ maxLength: 60 }),
                     baseUrl: str({ description: 'https (http only for localhost), no query or fragment' }),
-                    returnUrlPrefixes: { type: 'array', items: str(), minItems: 1, maxItems: 20, description: 'Default ["{baseUrl}/"]; same origin as baseUrl' }
+                    returnUrlPrefixes: { type: 'array', items: str(), minItems: 1, maxItems: 20, description: 'Default ["{baseUrl}/"]; same origin as baseUrl' },
+                    repoUrl: repoUrlInput
                 }, ['id', 'name', 'baseUrl']),
                 Star: obj({ key: str({ pattern: '^[a-z0-9-]{1,40}$' }), name: str({ maxLength: 60 }), description: nullable(str({ maxLength: 300 })) }, ['key', 'name']),
                 Game: obj({
@@ -101,8 +104,8 @@ export function openApiSpec(hubUrl: string) {
             '/developer/apps/{id}': {
                 parameters: [idParam],
                 get: op('One of your apps', 'developerToken', { 200: json(obj({ app: ref('App') })), ...errors(404) }),
-                patch: op('Change name or URLs', 'developerToken', { 200: json(obj({ app: ref('App') })), ...errors(400, 404) }, {
-                    requestBody: body(obj({ name: str(), baseUrl: str(), returnUrlPrefixes: { type: 'array', items: str() } }, []))
+                patch: op('Change name, URLs or repo URL', 'developerToken', { 200: json(obj({ app: ref('App') })), ...errors(400, 404) }, {
+                    requestBody: body(obj({ name: str(), baseUrl: str(), returnUrlPrefixes: { type: 'array', items: str() }, repoUrl: repoUrlInput }, []))
                 }),
                 delete: op('Disable the app (never deleted)', 'developerToken', { 200: json(obj({ app: ref('App') })), ...errors(404) })
             },
@@ -125,7 +128,12 @@ export function openApiSpec(hubUrl: string) {
             '/manifest': {
                 put: op('Declare games and star levels (call on boot)', 'appKey', {
                     200: json(obj({ games: { type: 'array', items: obj({ slug: str(), stars: int(), visibility: str({ enum: ['draft', 'public'] }) }) } })), ...errors(400, 403)
-                }, { requestBody: body(obj({ games: { type: 'array', items: ref('Game'), maxItems: 100 } })) })
+                }, {
+                    requestBody: body(obj({
+                        repoUrl: { ...repoUrlInput, description: 'Optional: sets the app\'s repo URL (null clears it); omitted leaves it as it is' },
+                        games: { type: 'array', items: ref('Game'), maxItems: 100 }
+                    }, ['games']))
+                })
             },
             '/players/{playerId}': {
                 parameters: [playerParam],

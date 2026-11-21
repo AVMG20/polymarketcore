@@ -12,4 +12,5 @@ PNX_HUB_URL=$HUB PNX_APP_ID=hello-yourname PNX_APP_KEY=pnx_… bun examples/hell
 
 Then open `$HUB/play/hello-yourname` (it is a draft: only you and admins see it), or test without a browser
 with `POST /api/v1/developer/apps/hello-yourname/test-launch` and `POST http://localhost:3300/api/session`.
-In your own repo, `bun add jose` first.
+In your own repo, `bun add jose` first. Set `PNX_REPO_URL=https://github.com/me/my-game` to show players
+where the code lives.

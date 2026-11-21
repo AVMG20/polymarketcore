@@ -3,7 +3,7 @@ import { createError } from 'h3'
 import { z } from 'zod'
 import { db } from '#server/database/index'
 import { apps, games, gameStars } from '#server/database/schema'
-import { checkImageUrl } from '#shared/app-urls'
+import { checkImageUrl, checkRepoUrl } from '#shared/app-urls'
 import { MAX_STARS_PER_GAME } from '#shared/economy'
 
 export const SLUG_PATTERN = /^[a-z0-9-]{2,40}$/
@@ -18,6 +18,17 @@ const imageUrl = (field: string) => z.string().nullish().superRefine((v, ctx) =>
     const check = checkImageUrl(v, field)
     if (!check.ok) ctx.addIssue({ code: 'custom', message: field === 'icon' ? `${check.error} (or a lucide icon name like lucide:dices)` : check.error })
 }).transform(v => v ?? null)
+
+/** `repoUrl`: an https URL, or null (or '') to clear it. */
+export const repoUrlField = z.string({ error: 'repoUrl must be an https URL or null' }).nullable().transform((v, ctx) => {
+    if (v === null || v.trim() === '') return null
+    const check = checkRepoUrl(v)
+    if (!check.ok) {
+        ctx.addIssue({ code: 'custom', message: check.error })
+        return z.NEVER
+    }
+    return check.url
+})
 
 export const manifestStarSchema = z.object({
     key: z.string({ error: 'key is required' }).regex(STAR_KEY_PATTERN, 'key must match [a-z0-9-]{1,40}'),
@@ -53,6 +64,8 @@ export const manifestGameSchema = z.object({
 })
 
 export const manifestSchema = z.object({
+    // Omitted: the app's repo URL stays as it is (the developer API and admins set it too); null clears it.
+    repoUrl: repoUrlField.optional(),
     games: z.array(manifestGameSchema, { error: 'games must be an array' }).max(100, 'a manifest lists at most 100 games')
 }).superRefine((m, ctx) => {
     const slugs = new Set<string>()
@@ -66,7 +79,8 @@ export type Manifest = z.infer<typeof manifestSchema>
 
 /**
  * Apply an app's manifest (contract §2 `PUT /manifest`): upsert its games and
- * stars by slug and key, and retire whatever the manifest no longer lists.
+ * stars by slug and key, retire whatever the manifest no longer lists, and
+ * set the app's repo URL when the manifest sends one.
  * The upsert only updates a slug this app owns, so a slug taken by another
  * app (even one claimed a moment ago by a parallel call) returns no row: 403.
  */
@@ -75,6 +89,11 @@ export async function applyManifest(appId: string, manifest: Manifest): Promise<
         // One manifest at a time per app, so two deploys can't interleave retirements.
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`pnx_manifest:${appId}`}))`)
         const [app] = await tx.select({ verified: apps.verified }).from(apps).where(eq(apps.id, appId))
+        // Only a change writes the app row (lock order: app row before game rows).
+        if (manifest.repoUrl !== undefined) {
+            await tx.update(apps).set({ repoUrl: manifest.repoUrl })
+                .where(and(eq(apps.id, appId), sql`${apps.repoUrl} is distinct from ${manifest.repoUrl}`))
+        }
         const defaultVisibility = app?.verified ? 'public' as const : 'draft' as const
 
         const result: { slug: string, stars: number, visibility: 'draft' | 'public' }[] = []

@@ -46,7 +46,8 @@ export interface GemHistoryItem {
     id: string
     /** What the row is, for labels: spends and refunds come from apps, bounties from star levels. */
     kind: GemHistoryKind
-    /** The game's name when `category` is a game slug. */
+    /** The game's slug and name when `category` is a game. */
+    game: string | null
     gameName: string | null
     amount: number
     balanceAfter: number
@@ -57,12 +58,63 @@ export interface GemHistoryItem {
     createdAt: string
 }
 
-/** `GET /api/gems/history?page=1&pageSize=25`. */
+/**
+ * `GET /api/gems/history?page=1&pageSize=25`, newest first. Optional filters:
+ * `range` (GemRange, default all), `dir` (in | out), `kind` (GemHistoryKind),
+ * `game` (slug: the ledger category). `before=<id>` continues after that row
+ * (load more); `total` counts every row matching the filters.
+ */
 export interface GemHistoryResponse {
     items: GemHistoryItem[]
     page: number
     pageSize: number
     total: number
+}
+
+/** Periods of the gem stats: the last 7, 30 or 90 Amsterdam days (today included), or everything. */
+export type GemRange = '7d' | '30d' | '90d' | 'all'
+
+/** One day (or week, from its Monday) of gem moves. */
+export interface GemStatsBucket {
+    /** First Amsterdam day of the bucket, 'YYYY-MM-DD'. */
+    day: string
+    in: number
+    out: number
+    net: number
+    moves: number
+    /** Balance at the end of the bucket. */
+    balance: number
+}
+
+/** Gems in or out of one source in the range: a kind, per game for spends. */
+export interface GemStatsSource {
+    kind: GemHistoryKind
+    direction: 'in' | 'out'
+    /** The game slug for spends, null otherwise. */
+    game: string | null
+    gameName: string | null
+    /** Gems, always positive. */
+    amount: number
+    moves: number
+}
+
+/** `GET /api/gems/stats?range=30d`: the viewer's gem flow, bucketed by Europe/Amsterdam day. */
+export interface GemStatsResponse {
+    range: GemRange
+    /** First and last day covered ('YYYY-MM-DD', Amsterdam). */
+    from: string
+    to: string
+    /** 'week' when an all-time range spans more than GEM_STATS_MAX_DAYS days. */
+    bucket: 'day' | 'week'
+    /** Current balance. */
+    balance: number
+    /** Balance before `from`. */
+    startBalance: number
+    totals: { in: number, out: number, net: number, moves: number }
+    /** Every bucket from `from` to `to`, empty ones included, oldest first. */
+    buckets: GemStatsBucket[]
+    /** Biggest first. */
+    sources: GemStatsSource[]
 }
 
 /** Star level n of a game: its name and what it takes ("Hold 10k coins"). */
@@ -94,17 +146,29 @@ export interface GameSummary {
     counts: boolean
     /** The app hasn't called the hub for 24 h: show "offline?". */
     offline: boolean
-    app: { id: string, name: string, origin: string, verified: boolean }
+    /** The app that hosts it. `owner` is the player who made it (null for hub-run apps), `repoUrl` where its code lives. */
+    app: { id: string, name: string, origin: string, verified: boolean, repoUrl: string | null, owner: PlayerRef | null }
     stars: StarLevel[]
     /** Number of levels (declared stars). */
     maxStars: number
     /** The viewer's level and best here, null when signed out or never played. */
     me: { stars: number, best: number } | null
+    /** When the game was first registered. */
+    createdAt: string
+    /** Players holding at least one star here right now. */
+    players: number
 }
 
 /** `GET /api/games`: public games of active apps (verified first, then "New" ones), plus the viewer's drafts. */
 export interface GamesResponse {
     games: GameSummary[]
+    /** The viewer's own order of the list (slugs), null when signed out or never set. */
+    order: string[] | null
+}
+
+/** `PUT /api/me/game-order` `{ order: [slug, …] }` (`[]` clears it): the saved order. */
+export interface GameOrderResponse {
+    order: string[]
 }
 
 export interface PlayerRef {
@@ -136,7 +200,7 @@ export interface LeaderboardEntry extends PlayerRef {
     games: Record<string, number>
 }
 
-/** `GET /api/leaderboard?limit=100&offset=0`. `me` is the viewer's row when signed in and ranked. */
+/** `GET /api/leaderboard?limit=100&offset=0`: every player, most stars first. `me` is the viewer's row when signed in. */
 export interface LeaderboardResponse {
     entries: LeaderboardEntry[]
     total: number
@@ -169,6 +233,8 @@ export interface PlayerProfileResponse {
         joinedAt: string
     }
     tracks: StarTrack[]
+    /** Games of apps this player owns, visible to the viewer. */
+    games: GameSummary[]
     recent: FeedEvent[]
 }
 
@@ -227,6 +293,8 @@ export interface AppInfo {
     name: string
     baseUrl: string
     returnUrlPrefixes: string[]
+    /** Where the app's code lives (https), or null. */
+    repoUrl: string | null
     status: 'active' | 'disabled'
     /** Set by an admin. Unverified: no star bounties, stars don't count, spends capped per player per day. */
     verified: boolean
@@ -314,4 +382,10 @@ export interface TestLaunchResponse {
     url: string
     playerId: string
     expiresIn: number
+}
+
+/** `GET /api/admin/players?q&limit&offset` (admin): players newest first, `stars` is the counted total. */
+export interface AdminPlayersResponse {
+    players: (PlayerRef & { email: string, gems: number, stars: number, createdAt: string })[]
+    total: number
 }

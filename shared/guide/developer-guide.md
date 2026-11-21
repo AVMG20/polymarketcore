@@ -38,7 +38,9 @@ curl -s -X POST $HUB/api/v1/developer/apps -H "Authorization: Bearer $DEV" -H 'C
 export KEY=pnx_…
 
 # 2. Declare the game and its star levels (your server does this on every boot).
+#    repoUrl (optional) is where your code lives; players see it on your game page.
 curl -s -X PUT $HUB/api/v1/manifest -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{
+  "repoUrl": "https://github.com/me/my-game",
   "games": [{
     "slug": "my-game", "name": "My Game", "tagline": "One line", "playPath": "/",
     "icon": "lucide:sparkles", "cover": null, "accent": "#7c5cff", "visibility": "draft",
@@ -209,23 +211,24 @@ fix. 400 bad input or can't afford, 401 bad credentials, 403 not yours / not con
 | Call | Body | Response |
 |---|---|---|
 | `GET /developer/apps` | | `{ apps: App[] }` |
-| `POST /developer/apps` | `{ id, name, baseUrl, returnUrlPrefixes? }` | 201 `{ app: App, apiKey }` (key shown once) |
+| `POST /developer/apps` | `{ id, name, baseUrl, returnUrlPrefixes?, repoUrl? }` | 201 `{ app: App, apiKey }` (key shown once) |
 | `GET /developer/apps/{id}` | | `{ app: App }` |
-| `PATCH /developer/apps/{id}` | `{ name?, baseUrl?, returnUrlPrefixes? }` | `{ app: App }` |
+| `PATCH /developer/apps/{id}` | `{ name?, baseUrl?, returnUrlPrefixes?, repoUrl? }` | `{ app: App }` |
 | `POST /developer/apps/{id}/rotate-key` | | `{ app: App, apiKey }` (old key stops at once) |
 | `DELETE /developer/apps/{id}` | | `{ app: App }` (disabled, never deleted) |
 | `GET /developer/apps/{id}/games` | | `{ app: App, games: [{ slug, name, visibility, counts, retired, playUrl, stars: [{ key, position, name, bounty, holders }] }] }` |
 | `POST /developer/apps/{id}/test-launch` | `{ game? }` | `{ token, url, playerId, expiresIn }` |
 
-`App` = `{ id, name, baseUrl, returnUrlPrefixes, status: 'active'|'disabled', verified, verifiedAt, owner, createdAt, games, lastSeenAt }`.
+`App` = `{ id, name, baseUrl, returnUrlPrefixes, repoUrl, status: 'active'|'disabled', verified, verifiedAt, owner, createdAt, games, lastSeenAt }`.
 `id`: `[a-z0-9-]{2,40}`. `baseUrl`: https (http only for localhost), no query or fragment.
-`returnUrlPrefixes` default to `["{baseUrl}/"]` and must share the `baseUrl` origin. At most {{MAX_DEVELOPER_APPS}} active apps per player.
+`returnUrlPrefixes` default to `["{baseUrl}/"]` and must share the `baseUrl` origin. `repoUrl`: https URL of
+your code (`https://github.com/me/my-game`), shown with your name on your game pages; `null` clears it. At most {{MAX_DEVELOPER_APPS}} active apps per player.
 
 ### App endpoints: `Authorization: Bearer pnx_…`
 
 | Call | Body | Response |
 |---|---|---|
-| `PUT /manifest` | `{ games: Game[] }` | `{ games: [{ slug, stars, visibility }] }` |
+| `PUT /manifest` | `{ repoUrl?, games: Game[] }` | `{ games: [{ slug, stars, visibility }] }` |
 | `GET /players/{playerId}` | | `{ id, name, image, gems, stars, title }` |
 | `POST /gems/spend` | `{ playerId, amount, game, reason?, idempotencyKey }` | `{ spendId, gems }` |
 | `POST /gems/refund` | `{ spendId }` | `{ gems }` |
@@ -238,6 +241,7 @@ fix. 400 bad input or can't afford, 401 bad credentials, 403 not yours / not con
   no `#`), `icon?` (https image or `lucide:name`), `cover?` (https image), `accent?` (`#rrggbb`),
   `visibility?` (`draft`|`public`; default `draft` for unverified apps, `public` for verified ones), `stars`
   (0-10 `{ key, name, description? }`; entry n names level n, the count is the game's max level). Games or stars missing from a later manifest are retired, never deleted.
+- **manifest `repoUrl`**: optional, the same field as on the app. Omitted leaves the app's repo URL as it is; `null` clears it.
 - **spend**: `amount` 1-100000 integer; `idempotencyKey` 8-100 chars. Same key + same params replays the
   original result without charging; different params → 409. Not enough gems → 400 `Not enough gems`.
 - **refund**: only your own spends, within 24 h, once.

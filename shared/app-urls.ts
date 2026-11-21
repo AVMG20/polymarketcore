@@ -1,5 +1,5 @@
 /**
- * Validation for an app's base URL and return URL prefixes. Returns the
+ * Validation for an app's base URL, return URL prefixes and repo URL. Returns the
  * normalised URL or an error message that says what to fix (the reader is
  * often a coding agent).
  */
@@ -17,7 +17,7 @@ export function isLocalHost(hostname: string): boolean {
     return LOCAL_HOSTS.has(hostname) || hostname.endsWith('.localhost')
 }
 
-function parse(raw: unknown, field: string, rules: UrlRules, allowQuery = false): { url: URL } | { error: string } {
+function parse(raw: unknown, field: string, rules: UrlRules, allowQuery = false, example = 'https://mygame.example.com'): { url: URL } | { error: string } {
     if (typeof raw !== 'string' || raw.trim() === '') return { error: `${field} is required` }
     if (raw.length > 500) return { error: `${field} must be at most 500 characters` }
     if (/[\u0000-\u001f\u007f\\\s]/.test(raw.trim())) return { error: `${field} must not contain spaces, backslashes or control characters` }
@@ -25,7 +25,7 @@ function parse(raw: unknown, field: string, rules: UrlRules, allowQuery = false)
     try {
         url = new URL(raw.trim())
     } catch {
-        return { error: `${field} must be an absolute URL like https://mygame.example.com` }
+        return { error: `${field} must be an absolute URL like ${example}` }
     }
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return { error: `${field} must use http or https` }
     if (url.username || url.password) return { error: `${field} must not contain a username or password` }
@@ -74,6 +74,29 @@ export function normalizeAppUrls(
         if (!out.includes(check.url)) out.push(check.url)
     }
     return { ok: true, baseUrl: base.url, returnUrlPrefixes: out }
+}
+
+/**
+ * Where an app's code lives (`https://github.com/me/my-game`): https only,
+ * whatever the environment, since players open it. A query is fine, a
+ * #fragment is not.
+ */
+export function checkRepoUrl(raw: unknown, field = 'repoUrl'): UrlCheck {
+    const example = 'https://github.com/me/my-game'
+    const parsed = parse(raw, field, { production: false }, true, example)
+    if ('error' in parsed) return { ok: false, error: parsed.error }
+    if (parsed.url.protocol !== 'https:') return { ok: false, error: `${field} must be an https URL like ${example}` }
+    return { ok: true, url: parsed.url.href }
+}
+
+/** Whether a repo URL is on GitHub (shown with its icon). */
+export function isGithubUrl(url: string): boolean {
+    try {
+        const host = new URL(url).hostname
+        return host === 'github.com' || host === 'www.github.com'
+    } catch {
+        return false
+    }
 }
 
 /**

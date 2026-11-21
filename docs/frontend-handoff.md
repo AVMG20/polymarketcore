@@ -36,7 +36,9 @@ visible to their owner and admins. A game is "offline?" when its app hasn't call
 | `useDeveloperGuide()` | `markdown` (the text of `/developers.md`), `copy()`, `copied`. |
 | `usePnxBridge(iframeRef, appOrigin, { onStar, onRelaunch })` | The iframe postMessage bridge (contract §1), origin- and source-checked: `wallet` sets gems, `star { game, stars }` refetches `useMe` and sets `lastStar` (`{ game, stars, at }`), `title` sets `gameTitle`, `relaunch` calls `onRelaunch` at most once per 30 s. `sendHello()` on iframe `load`. |
 | `useGameLaunch(slug)` | Client-only `GET /api/play/:slug/launch`: `launch` (`{ url, directUrl, app, game }`), `error`, `pending`, `reload()`. |
-| `useGames()`, `useGame(slug)`, `useLeaderboard(limit, offset)`, `usePlayerProfile(id)`, `useFeed()`, `useGemHistory(page, pageSize)` | `useAsyncData` wrappers over the read endpoints below. |
+| `useGames()`, `useGame(slug)`, `useLeaderboard(limit, offset)`, `usePlayerProfile(id)`, `useFeed()`, `useGemStats(range)` | `useAsyncData` wrappers over the read endpoints below. |
+| `useGemLedger(filter)` | The gem ledger for `{ range, dir, source }`: `items`, `total`, `hasMore`, `loadMore()` (continues with `before`). |
+| `useGameSort(data)` | `/games` sorting: `sort` (`?sort=`, remembered per browser), `options`, `games` (sorted), "My order" editing (`editing`, `toggleEditing`, `move(slug, toSlug)`, `reset()`; saves debounced to `PUT /api/me/game-order`). |
 | `useAdminApps()` | `apps`, `create`, `rotateKey`, `update`, `verify(id)`, `resetLink(email)`, `revealedKey`, `busy`. |
 
 Utils (`app/utils/`, auto-imported): `apiFetch<T>(url, opts)` (SSR-safe), `apiErrorMessage(e, fallback)`,
@@ -47,27 +49,30 @@ Route middleware: `auth`, `guest`, `admin`.
 
 All errors are `{ statusCode, statusMessage }`. Dates are ISO strings. Every player in a response (`PlayerRef`: top
 players, leaderboard entries, profiles, feed events) is `{ id, name, image, emblem, prestige }`; pass all of
-them to `PnxPlayerAvatar`. App owners in `AppInfo` stay `{ id, name, image }` (it is part of `/api/v1`).
+them to `PnxPlayerAvatar`. App owners in `AppInfo` stay `{ id, name, image }` (it is part of `/api/v1`); the
+game's maker is `GameSummary.app.owner` (a full `PlayerRef`).
 
 | Route | Auth | Response |
 |---|---|---|
 | `GET /api/me` | user (401 signed out) | `Me`: `{ id, name, email, image, emblem, prestige, gems, stars (counted total), title, nextTitle, claimable: { days, gems, cap, fullInDays }, role, createdAt }`. Also retries a failed welcome grant. |
 | `PUT /api/me/emblem` | user | `{ emblem }` (EmblemData or its JSON; `null` clears) → `{ emblem, historyId }`. 400 `emblem is not a valid emblem`. History keeps the newest `EMBLEM_HISTORY_LIMIT`. |
 | `GET /api/me/emblem/history` | user | `{ entries: [{ id, emblem, createdAt }] }`, newest first |
+| `PUT /api/me/game-order` | user | `{ order: [slug, …] }` (deduped, at most `GAME_ORDER_MAX`, games the viewer can see; `[]` clears) → `{ order }`. 400 `order: unknown game <slug>`. |
 | `POST /api/gems/claim` | user, 5 per 10 s | `{ gems, claimed, days }` |
-| `GET /api/gems/history?page&pageSize` | user | `{ items: [{ id, kind: 'welcome'\|'daily'\|'admin'\|'spend'\|'refund'\|'bounty', gameName, amount (signed), balanceAfter, category, refund, appId, meta, createdAt }], page, pageSize, total }` |
-| `GET /api/games` | public, personalised | `{ games: GameSummary[] }`, verified apps first. `GameSummary`: `{ slug, name, tagline, description (markdown), playPath, icon (url or `lucide:name`), cover, accent, position, visibility, counts, offline, app: { id, name, origin, verified }, stars: StarLevel[], maxStars, me: { stars, best } \| null }`. `StarLevel`: `{ key, position (level), name, description, bounty, holders (players at ≥ this level) }`. Split into Games (`app.verified`), New (`!app.verified`) and Your drafts (`visibility === 'draft'`). |
+| `GET /api/gems/history?page&pageSize&range&dir&kind&game&before` | user | `{ items: [{ id, kind: 'welcome'\|'daily'\|'admin'\|'spend'\|'refund'\|'bounty', game, gameName, amount (signed), balanceAfter, category, refund, appId, meta, createdAt }], page, pageSize, total }`. Filters: `range` (`7d`/`30d`/`90d`/`all`), `dir` (`in`/`out`), `kind`, `game` (slug); `before=<id>` loads the rows after that one. |
+| `GET /api/gems/stats?range=30d` | user | `{ range, from, to, bucket: 'day'\|'week', balance, startBalance, totals: { in, out, net, moves }, buckets: [{ day, in, out, net, moves, balance }], sources: [{ kind, direction, game, gameName, amount, moves }] }`. Europe/Amsterdam days; an all-time range over 120 days is bucketed by week. |
+| `GET /api/games` | public, personalised | `{ games: GameSummary[], order: string[] \| null (the viewer's own order) }`, verified apps first. `GameSummary`: `{ slug, name, tagline, description (markdown), playPath, icon (url or `lucide:name`), cover, accent, position, visibility, counts, offline, app: { id, name, origin, verified, repoUrl, owner: PlayerRef \| null }, stars: StarLevel[], maxStars, me: { stars, best } \| null, createdAt, players (holding a star) }`. `StarLevel`: `{ key, position (level), name, description, bounty, holders (players at ≥ this level) }`. Split into Games (`app.verified`), New (`!app.verified`) and Your drafts (`visibility === 'draft'`). |
 | `GET /api/games/:slug` | public | `{ game, topPlayers: [{ id, name, image, stars, best }], recent: FeedEvent[] }` |
 | `GET /api/leaderboard?limit&offset` | public | `{ entries: [{ rank, id, name, image, stars, title, heldSince, games: { [slug]: level } }], total, me }`. Ties go to whoever has held their total longest. |
-| `GET /api/players/:id` | public | `{ player: { id, name, image, stars, title, nextTitle, rank, joinedAt }, tracks: StarTrack[], recent: FeedEvent[] }`. `StarTrack`: `{ game, name, icon, accent, counts, verified, retired, stars, best, maxStars, updatedAt, levels: [{ key, position, name, description }] }` (public games the player has a level in). |
+| `GET /api/players/:id` | public | `{ player: { id, name, image, stars, title, nextTitle, rank, joinedAt }, tracks: StarTrack[], games: GameSummary[] (games of apps the player owns), recent: FeedEvent[] }`. `StarTrack`: `{ game, name, icon, accent, counts, verified, retired, stars, best, maxStars, updatedAt, levels: [{ key, position, name, description }] }` (public games the player has a level in). |
 | `GET /api/feed?before=<iso>` | public | `{ events: [{ id, type: 'star'\|'claim'\|'join'\|'title', player, payload, createdAt }] }` (50). Star payload: `{ game, gameName, from, stars, direction: 'up'\|'down', name, total }` → "reached ★3" / "dropped to ★1". |
 | `GET /api/play/:slug/launch` | user | `{ url (iframe src with #pnx), directUrl (/connect path for "open in new tab"), app: { id, origin }, game: { slug, name } }`. Never cache it. |
 | `GET /api/config` | public | `{ discord }` |
 | `GET/POST /api/developer/tokens`, `DELETE /api/developer/tokens/:id` | user | `{ tokens, max }` / `{ token, secret }` / `{ revoked: true }` |
-| `GET /api/admin/apps` | admin | `{ apps: AppInfo[] }`: `{ id, name, baseUrl, returnUrlPrefixes, status, verified, verifiedAt, owner, createdAt, games, lastSeenAt }` |
-| `POST /api/admin/apps` | admin | `{ id, name, baseUrl, returnUrlPrefixes? }` → `{ app, apiKey }` |
+| `GET /api/admin/apps` | admin | `{ apps: AppInfo[] }`: `{ id, name, baseUrl, returnUrlPrefixes, repoUrl, status, verified, verifiedAt, owner, createdAt, games, lastSeenAt }` |
+| `POST /api/admin/apps` | admin | `{ id, name, baseUrl, returnUrlPrefixes?, repoUrl? }` → `{ app, apiKey }` |
 | `POST /api/admin/apps/:id/rotate-key` | admin | `{ app, apiKey }` |
-| `PATCH /api/admin/apps/:id` | admin | `{ name?, baseUrl?, returnUrlPrefixes?, status? }` → `{ app }` |
+| `PATCH /api/admin/apps/:id` | admin | `{ name?, baseUrl?, returnUrlPrefixes?, repoUrl? (null clears), status? }` → `{ app }` |
 | `POST /api/admin/apps/:id/verify` | admin | `{ app, paid: { players, gems } }` |
 | `POST /api/admin/password-reset` | admin | `{ email }` → `{ url, expiresInMinutes }` (one-time link to `/reset-password`) |
 | `/api/auth/**` | | better-auth (use `authClient`) |
@@ -98,8 +103,8 @@ Outside `/api`: `/connect`, `/.well-known/jwks.json`, `/healthz`, `/developers.m
 Built (minimal, restyle them): `/login`, `/register`, `/reset-password`, `/` (player card with the claim
 pile + game sections), `/leaderboard`, `/play/[slug]` (sandboxed iframe shell with a slim top bar, the
 bridge, relaunch and "open in new tab"), `/settings` (name and avatar), `/settings/emblem` (emblem editor and saved history), `/settings/developer` (tokens:
-create, list, revoke), `/developers` (flow, two steps, the agent brief with a copy button), `/gems` (plain
-history table), `/admin/apps` (apps, verify, keys, reset links).
+create, list, revoke), `/developers` (flow, two steps, the agent brief with a copy button), `/gems` (range
+tiles, in/out/net and balance chart, sources, filtered ledger), `/admin/apps` (apps, verify, keys, reset links).
 
 Still to build or polish:
 
@@ -115,6 +120,5 @@ Still to build or polish:
 - **Settings** `/settings`: polish profile; add password change and linked Discord (`authClient.changePassword`, `linkSocial`)
 - **Developer tokens** `/settings/developer`: polish (it works)
 - **Developers** `/developers`: polish the flow visual and the copy block (keep the human part very short)
-- **Gem history** `/gems`: labels per kind, game names, refunds and bounties marked, paging
 - **Activity feed** `/feed`: infinite scroll with `before`; render "reached ★n" / "dropped to ★n"
 - **Level moment** on `/play/[slug]` (today a small "★n" badge driven by `lastStar`)
