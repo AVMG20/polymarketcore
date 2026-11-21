@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Code, Gem, LogOut, Moon, Settings, Shield, Sun, User } from 'lucide-vue-next'
+import { Code, Gem, LogOut, Moon, Settings, Shield, Sun, User, Users } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import {
     DropdownMenu,
@@ -22,8 +22,7 @@ const toggleTheme = () => {
 const links = [
     { to: '/games', label: 'Games' },
     { to: '/leaderboard', label: 'Leaderboard' },
-    { to: '/feed', label: 'Feed' },
-    { to: '/developers', label: 'Make a game' }
+    { to: '/feed', label: 'Feed' }
 ]
 const active = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 </script>
@@ -82,6 +81,9 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                             </DropdownMenuItem>
                             <DropdownMenuItem v-if="isAdmin" as-child>
                                 <NuxtLink to="/admin/apps"><Shield class="size-4" /> Apps</NuxtLink>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem v-if="isAdmin" as-child>
+                                <NuxtLink to="/admin/players"><Users class="size-4" /> Players</NuxtLink>
                             </DropdownMenuItem>
                             <DropdownMenuItem class="md:hidden" @select="toggleTheme">
                                 <Sun v-if="isDark" class="size-4" /><Moon v-else class="size-4" /> {{ isDark ? 'Light mode' : 'Dark mode' }}
