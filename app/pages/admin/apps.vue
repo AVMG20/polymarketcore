@@ -41,8 +41,14 @@ const keyOpen = computed({
     }
 })
 
-// Verify pays out bounties and disable takes the app's games offline: both ask first.
-const confirm = ref<{ kind: 'verify' | 'disable', app: AppInfo } | null>(null)
+// Verify pays out bounties, rotate cuts the app off until it gets the new key, disable takes its games offline: all ask first.
+const confirm = ref<{ kind: 'verify' | 'rotate' | 'disable', app: AppInfo } | null>(null)
+const CONFIRM = {
+    verify: { title: 'Verify', text: 'Its stars count and bounties are paid out.', action: 'Verify', variant: 'gem' },
+    rotate: { title: 'Rotate the key of', text: 'The old key stops working right away. The app is cut off until it gets the new one.', action: 'Rotate key', variant: 'destructive' },
+    disable: { title: 'Disable', text: 'Its games stop launching.', action: 'Disable', variant: 'destructive' }
+} as const
+const confirmCopy = computed(() => (confirm.value ? CONFIRM[confirm.value.kind] : null))
 const confirmOpen = computed({
     get: () => !!confirm.value,
     set: (open: boolean) => {
@@ -73,6 +79,7 @@ async function runConfirm() {
     const c = confirm.value
     if (!c) return
     if (c.kind === 'verify') await verify(c.app.id)
+    else if (c.kind === 'rotate') await rotateKey(c.app.id)
     else await update(c.app.id, { status: 'disabled' })
     confirm.value = null
 }
@@ -115,7 +122,7 @@ async function runConfirm() {
                 </dl>
                 <div class="flex flex-wrap gap-2">
                     <Button v-if="!app.verified" size="sm" variant="gem" :disabled="busy" @click="confirm = { kind: 'verify', app }">Verify</Button>
-                    <Button size="sm" variant="outline" :disabled="busy" @click="rotateKey(app.id)">Rotate key</Button>
+                    <Button size="sm" variant="outline" :disabled="busy" @click="confirm = { kind: 'rotate', app }">Rotate key</Button>
                     <Button size="sm" variant="outline" :disabled="busy" @click="editRepo(app)"><Code /> Repo</Button>
                     <Button
                         v-if="app.status === 'active'"
@@ -207,14 +214,13 @@ async function runConfirm() {
         <Dialog v-model:open="confirmOpen">
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{{ confirm?.kind === 'verify' ? 'Verify' : 'Disable' }} {{ confirm?.app.name }}?</DialogTitle>
-                    <DialogDescription v-if="confirm?.kind === 'verify'">Its stars count and bounties are paid out.</DialogDescription>
-                    <DialogDescription v-else>Its games stop launching.</DialogDescription>
+                    <DialogTitle>{{ confirmCopy?.title }} {{ confirm?.app.name }}?</DialogTitle>
+                    <DialogDescription>{{ confirmCopy?.text }}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter class="gap-2">
                     <Button variant="outline" @click="confirm = null">Cancel</Button>
-                    <Button :variant="confirm?.kind === 'verify' ? 'gem' : 'destructive'" :disabled="busy" @click="runConfirm">
-                        {{ confirm?.kind === 'verify' ? 'Verify' : 'Disable' }}
+                    <Button :variant="confirmCopy?.variant ?? 'destructive'" :disabled="busy" @click="runConfirm">
+                        {{ confirmCopy?.action }}
                     </Button>
                 </DialogFooter>
             </DialogContent>
