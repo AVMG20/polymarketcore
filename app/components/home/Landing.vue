@@ -7,9 +7,9 @@ const games = computed(() => data.value?.games ?? [])
 const featured = computed(() => games.value.filter(g => g.visibility === 'public').slice(0, 3))
 
 const steps = [
-    { icon: Gem, title: 'Collect gems', text: `${STARTER_GEMS} to start, ${DAILY_GEMS} more every day. They pile up for up to 10 days.` },
-    { icon: Trophy, title: 'Earn stars', text: 'Every game has up to 10 star levels. Play well, climb them. They can drop, too.' },
-    { icon: Code, title: 'Make your own', text: 'Have a coding agent build a game and put it on Polynux.' }
+    { icon: Gem, title: 'Collect gems', text: `${STARTER_GEMS} to start, ${DAILY_GEMS} a day.` },
+    { icon: Trophy, title: 'Earn stars', text: 'Up to 10 levels per game.' },
+    { icon: Code, title: 'Make your own', text: 'Let an agent build it.' }
 ]
 </script>
 
@@ -24,7 +24,7 @@ const steps = [
             <PnxGemGlyph class="absolute bottom-[22%] left-[14%] hidden size-6 -rotate-12 text-gem/70 sm:block" aria-hidden="true" />
             <div class="relative mx-auto max-w-2xl space-y-5">
                 <h1 class="font-display text-4xl font-extrabold leading-[1.05] sm:text-6xl">Play. Collect stars. <span class="text-primary">Climb.</span></h1>
-                <p class="mx-auto max-w-md text-base text-muted-foreground sm:text-lg">Free games, one gem wallet, one leaderboard. No real money, ever.</p>
+                <p class="mx-auto max-w-md text-base text-muted-foreground sm:text-lg">Free games. One wallet. One leaderboard.</p>
                 <div class="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
                     <Button variant="chunky" size="lg" as-child><NuxtLink to="/register">Play free <ArrowRight /></NuxtLink></Button>
                     <Button variant="outline" size="lg" as-child><NuxtLink to="/login">Sign in</NuxtLink></Button>

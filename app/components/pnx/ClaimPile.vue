@@ -28,8 +28,8 @@ async function onClaim() {
                     {{ pile.gems }}<span class="text-base font-medium text-muted-foreground"> / {{ pile.cap }} ready</span>
                 </p>
                 <p class="text-sm text-muted-foreground">
-                    <template v-if="full">Pile is full. Claim to keep it filling.</template>
-                    <template v-else-if="pile.gems === 0">Nothing yet, the next 10 arrive tomorrow.</template>
+                    <template v-if="full">Full</template>
+                    <template v-else-if="pile.gems === 0">Next one tomorrow</template>
                     <template v-else>Full in {{ pile.fullInDays }} {{ pile.fullInDays === 1 ? 'day' : 'days' }}</template>
                 </p>
             </div>
