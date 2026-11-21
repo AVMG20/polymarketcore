@@ -39,7 +39,7 @@ export function sortGames(games: GameSummary[], sort: GameSort, order: readonly 
         featured: null,
         newest: (a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
         stars: (a, b) => (b.me?.stars ?? 0) - (a.me?.stars ?? 0) || b.maxStars - a.maxStars,
-        popular: (a, b) => b.players - a.players
+        popular: (a, b) => b.playSeconds - a.playSeconds || b.players - a.players
     }
     const compare = by[sort]
     if (!compare) return games

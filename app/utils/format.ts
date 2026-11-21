@@ -9,6 +9,17 @@ export function formatNumber(value: number | bigint | string, compact = true): s
     return (compact ? compactFormat : fullFormat).format(n)
 }
 
+/** Play time: `45s`, `12m`, `3h 20m`, `1.2K h` past 10K hours. */
+export function formatDuration(seconds: number): string {
+    const s = Math.max(0, Math.round(seconds))
+    if (s < 60) return `${s}s`
+    const m = Math.floor(s / 60)
+    if (m < 60) return `${m}m`
+    const h = Math.floor(m / 60)
+    if (h >= 100) return `${formatNumber(h)}h`
+    return m % 60 ? `${h}h ${m % 60}m` : `${h}h`
+}
+
 const relative = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 /** "3 minutes ago", "yesterday". */

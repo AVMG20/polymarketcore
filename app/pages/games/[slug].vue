@@ -20,6 +20,8 @@ const cover = ref<HTMLImageElement | null>(null)
 onMounted(() => { if (cover.value?.complete && cover.value.naturalWidth === 0) coverBroken.value = true })
 const best = computed(() => game.value?.me?.best ?? 0)
 const current = computed(() => game.value?.me?.stars ?? 0)
+const { counts } = usePresence()
+const live = computed(() => counts.value[slug.value] ?? 0)
 
 useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
 </script>
@@ -48,6 +50,10 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                     <div class="min-w-0 flex-1 space-y-1.5">
                         <div class="flex flex-wrap items-center gap-2">
                             <h1 class="text-3xl sm:text-4xl">{{ game.name }}</h1>
+                            <PnxHotBadge v-if="game.hot" />
+                            <Badge v-if="live" variant="outline" class="gap-1.5 bg-background/70" :title="`${live} playing now`">
+                                <span class="size-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" aria-hidden="true" />{{ live }} playing
+                            </Badge>
                             <Badge v-if="game.visibility === 'draft'" variant="secondary">Draft</Badge>
                             <Badge v-else-if="!game.app.verified" variant="secondary">New</Badge>
                             <Badge v-if="game.offline" variant="outline" class="bg-background/70">offline?</Badge>
@@ -113,6 +119,8 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                 </div>
 
                 <aside class="space-y-6">
+                    <PnxGameActivity v-if="data?.activity" :activity="data.activity" />
+
                     <section class="space-y-3">
                         <h2 class="text-xl">Top players</h2>
                         <ol v-if="data?.topPlayers.length" class="divide-y overflow-hidden rounded-2xl border bg-card">

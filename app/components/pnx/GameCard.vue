@@ -38,6 +38,7 @@ const playTo = computed(() => (loggedIn.value ? `/play/${props.game.slug}` : { p
                 <Badge v-if="live" variant="outline" class="gap-1.5 bg-background/75 backdrop-blur" :title="`${live} playing now`">
                     <span class="size-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" aria-hidden="true" />{{ live }} playing
                 </Badge>
+                <PnxHotBadge v-if="game.hot" />
                 <Badge v-if="isDraft" variant="secondary">Draft</Badge>
                 <Badge v-else-if="!game.app.verified" variant="secondary">New</Badge>
                 <Badge v-if="game.offline" variant="outline" class="bg-background/70 backdrop-blur">offline?</Badge>
