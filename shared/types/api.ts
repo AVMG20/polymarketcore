@@ -157,6 +157,10 @@ export interface GameSummary {
     createdAt: string
     /** Players holding at least one star here right now. */
     players: number
+    /** Seconds the game was played (visible and focused) over the last 7 days. */
+    playSeconds: number
+    /** Among the most played games of the last day. */
+    hot: boolean
 }
 
 /** `GET /api/games`: public games of active apps (verified first, then "New" ones), plus the viewer's drafts. */
@@ -187,6 +191,24 @@ export interface GameDetailResponse {
     topPlayers: (PlayerRef & { stars: number, best: number })[]
     /** Latest feed events for this game. */
     recent: FeedEvent[]
+    activity: GameActivity
+}
+
+/** One Amsterdam day of a game's play: opens, distinct players, seconds played, most at once. */
+export interface GameActivityDay {
+    day: string
+    opens: number
+    players: number
+    seconds: number
+    peak: number
+}
+
+/** A game's play over its last 30 days. Anonymous: totals only. */
+export interface GameActivity {
+    from: string
+    to: string
+    days: GameActivityDay[]
+    totals: { opens: number, players: number, seconds: number, avgSessionSeconds: number, peak: number }
 }
 
 export interface LeaderboardEntry extends PlayerRef {

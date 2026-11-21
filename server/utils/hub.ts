@@ -15,6 +15,7 @@ import type {
     StarTrack
 } from '#shared/types/api'
 import { appOrigin } from '#server/utils/apps'
+import { gameActivity, hotGames, weekPlaySeconds } from '#server/utils/play-stats'
 import { countedGame, gameCounts } from '#server/utils/stars'
 
 /**
@@ -67,7 +68,7 @@ export async function listGames(viewer: Viewer | null, filter: { slug?: string, 
     if (rows.length === 0) return []
     const slugs = rows.map(r => r.game.slug)
 
-    const [levels, levelRows, mine] = await Promise.all([
+    const [levels, levelRows, mine, play, hot] = await Promise.all([
         db.select().from(gameStars)
             .where(and(inArray(gameStars.game, slugs), isNull(gameStars.retiredAt)))
             .orderBy(asc(gameStars.position)),
@@ -78,7 +79,9 @@ export async function listGames(viewer: Viewer | null, filter: { slug?: string, 
             .groupBy(playerStars.game, playerStars.stars),
         viewer
             ? db.select().from(playerStars).where(and(eq(playerStars.userId, viewer.id), inArray(playerStars.game, slugs)))
-            : Promise.resolve([])
+            : Promise.resolve([]),
+        weekPlaySeconds(slugs),
+        hotGames()
     ])
 
     const myLevel = new Map(mine.map(m => [m.game, m]))
@@ -96,6 +99,8 @@ export async function listGames(viewer: Viewer | null, filter: { slug?: string, 
         return {
             createdAt: game.createdAt.toISOString(),
             players: atLevel.reduce((sum, l) => sum + l.n, 0),
+            playSeconds: play.get(game.slug) ?? 0,
+            hot: hot.has(game.slug),
             slug: game.slug,
             name: game.name,
             tagline: game.tagline,
@@ -127,16 +132,17 @@ export async function getGameDetail(slug: string, viewer: Viewer | null): Promis
     const [game] = await listGames(viewer, { slug })
     if (!game) throw createError({ statusCode: 404, statusMessage: 'Game not found' })
 
-    const [top, recent] = await Promise.all([
+    const [top, recent, activity] = await Promise.all([
         db.select({ ...playerColumns, stars: playerStars.stars, best: playerStars.bestStars })
             .from(playerStars)
             .innerJoin(user, eq(user.id, playerStars.userId))
             .where(and(eq(playerStars.game, slug), gte(playerStars.stars, 1)))
             .orderBy(desc(playerStars.stars), asc(playerStars.updatedAt))
             .limit(10),
-        getFeed({ game: slug, limit: 10 })
+        getFeed({ game: slug, limit: 10 }),
+        gameActivity(slug)
     ])
-    return { game, topPlayers: top, recent }
+    return { game, topPlayers: top, recent, activity }
 }
 
 interface RankedRow {

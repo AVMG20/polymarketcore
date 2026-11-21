@@ -254,3 +254,24 @@ export const activityEvents = pgTable('activity_events', {
     index('activity_events_created_idx').on(table.createdAt),
     index('activity_events_user_created_idx').on(table.userId, table.createdAt)
 ])
+
+/**
+ * One open /play page of a signed-in player: when it opened, when it was last
+ * seen, and how long it was visible and focused. Only per-game totals are ever
+ * shown, never who played.
+ */
+export const playSessions = pgTable('play_sessions', {
+    id: text('id').primaryKey(),
+    game: text('game').notNull(),
+    userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true }).notNull(),
+    activeSeconds: integer('active_seconds').notNull().default(0)
+}, table => [index('play_sessions_game_started_idx').on(table.game, table.startedAt)])
+
+/** The most players active in a game at the same time, per Amsterdam day. */
+export const gameDailyPeaks = pgTable('game_daily_peaks', {
+    game: text('game').notNull(),
+    day: date('day', { mode: 'string' }).notNull(),
+    peak: integer('peak').notNull()
+}, table => [primaryKey({ columns: [table.game, table.day] })])

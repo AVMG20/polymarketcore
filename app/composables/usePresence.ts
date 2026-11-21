@@ -8,11 +8,14 @@ const counts = ref<Record<string, number>>({})
 let socket: WebSocket | null = null
 let users = 0
 let playing: string | null = null
+/** The page is visible and focused (focus inside the game's iframe counts). */
+let active = true
+let activeTimer: ReturnType<typeof setInterval> | undefined
 let retry = 0
 let retryTimer: ReturnType<typeof setTimeout> | undefined
 
 function send() {
-    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ play: playing }))
+    if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(playing ? { play: playing, active } : { play: null }))
 }
 
 function connect() {
@@ -57,10 +60,31 @@ export function usePresence() {
     return { counts: readonly(counts) }
 }
 
-/** Tell the hub this tab is playing `slug` while the calling component is mounted. */
+const isActive = () => document.visibilityState === 'visible' && document.hasFocus()
+
+/** Report a change of `active`. Focus moving into the iframe blurs the window first: check after it settles. */
+function checkActive() {
+    setTimeout(() => {
+        const now = isActive()
+        if (now === active) return
+        active = now
+        send()
+    }, 0)
+}
+
+const ACTIVE_EVENTS = ['focus', 'blur', 'visibilitychange'] as const
+
+/**
+ * Tell the hub this tab is playing `slug` while the calling component is
+ * mounted, and whether the page is in use (visible and focused), for play time.
+ */
 export function reportPlaying(slug: MaybeRefOrGetter<string>) {
     if (!import.meta.client) return
     onMounted(() => {
+        active = isActive()
+        for (const e of ACTIVE_EVENTS) (e === 'visibilitychange' ? document : window).addEventListener(e, checkActive)
+        // Focus leaving the browser from inside the iframe fires nothing here: poll as well.
+        activeTimer = setInterval(checkActive, 5000)
         acquire()
         watch(() => toValue(slug), (s) => {
             playing = s
@@ -68,6 +92,8 @@ export function reportPlaying(slug: MaybeRefOrGetter<string>) {
         }, { immediate: true })
     })
     onBeforeUnmount(() => {
+        for (const e of ACTIVE_EVENTS) (e === 'visibilitychange' ? document : window).removeEventListener(e, checkActive)
+        clearInterval(activeTimer)
         playing = null
         send()
         release()
