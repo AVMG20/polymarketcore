@@ -53,10 +53,28 @@ const pages = computed(() => {
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
 const matches = (text: string, term: string) => norm(text).includes(term)
 
+/**
+ * 3: the name has every word, 2: name or tagline, 1: anywhere else (description,
+ * app, maker, star names), so "panda heist" finds the casino. 0: no match.
+ */
+function gameRank(g: GameSummary, terms: string[]): number {
+    if (!terms.length) return 1
+    const all = (text: string) => terms.every(t => text.includes(t))
+    const name = norm(g.name)
+    if (all(name)) return 3
+    if (all(`${name} ${norm(g.tagline ?? '')}`)) return 2
+    const rest = [g.name, g.tagline, g.description, g.app.name, g.app.owner?.name, ...g.stars.map(s => s.name)]
+    return all(norm(rest.filter(Boolean).join(' '))) ? 1 : 0
+}
+
 const groups = computed(() => {
     const term = norm(q.value.trim())
+    const terms = term.split(/\s+/).filter(Boolean)
     const games = (gamesData.value?.games ?? [])
-        .filter(g => !term || matches(g.name, term) || matches(g.tagline ?? '', term) || matches(g.app.name, term))
+        .map(g => ({ g, rank: gameRank(g, terms) }))
+        .filter(x => x.rank > 0)
+        .sort((a, b) => b.rank - a.rank)
+        .map(x => x.g)
         .slice(0, term ? 6 : 4)
         .map<Item>(g => ({ key: `g:${g.slug}`, to: loggedIn.value ? `/play/${g.slug}` : `/games/${g.slug}`, label: g.name, hint: g.tagline ?? undefined, kind: 'game', game: g }))
     const people = term ? players.value.map<Item>(p => ({ key: `p:${p.id}`, to: `/players/${p.id}`, label: p.name, kind: 'player', player: p })) : []
@@ -150,7 +168,7 @@ const indexOf = (item: Item) => flat.value.indexOf(item)
     >
         <Search class="size-4 shrink-0" />
         <span class="hidden flex-1 text-left lg:inline">Search</span>
-        <kbd class="pointer-events-none hidden rounded border bg-background px-1.5 font-mono text-[0.7rem] lg:inline">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
+        <kbd class="pointer-events-none hidden shrink-0 whitespace-nowrap rounded border bg-background px-1.5 font-mono text-[0.7rem] lg:inline">{{ isMac ? '⌘' : 'Ctrl' }} K</kbd>
     </button>
 
     <Dialog v-model:open="open">
@@ -169,7 +187,7 @@ const indexOf = (item: Item) => flat.value.indexOf(item)
                     aria-label="Search"
                     @keydown="onKey"
                 >
-                <kbd class="hidden rounded border px-1.5 font-mono text-[0.7rem] text-muted-foreground sm:inline">Esc</kbd>
+                <kbd class="hidden shrink-0 whitespace-nowrap rounded border px-1.5 font-mono text-[0.7rem] text-muted-foreground sm:inline">Esc</kbd>
             </div>
             <div class="max-h-[min(60vh,28rem)] overflow-y-auto p-2" role="listbox" aria-label="Results">
                 <p v-if="!flat.length" class="py-10 text-center text-sm text-muted-foreground">No results</p>
