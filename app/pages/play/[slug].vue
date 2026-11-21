@@ -9,6 +9,7 @@ const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const { me } = useMe()
 const { launch, error, pending, reload } = useGameLaunch(slug)
+reportPlaying(slug)
 const iframe = ref<HTMLIFrameElement | null>(null)
 const loaded = ref(false)
 

@@ -38,6 +38,8 @@ export default defineNuxtConfig({
     nitro: {
         // Production serves on Bun (Dockerfile, `bun run preview`).
         preset: 'bun',
+        // /api/presence: live "playing now" counts on the game cards.
+        experimental: { websocket: true },
         // Served raw: /developers.md (one source with the /developers copy block) and the reference game.
         // `dir` is relative to server/.
         serverAssets: [

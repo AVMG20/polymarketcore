@@ -15,6 +15,8 @@ const cover = ref<HTMLImageElement | null>(null)
 onMounted(() => { if (cover.value?.complete && cover.value.naturalWidth === 0) coverBroken.value = true })
 const isDraft = computed(() => props.game.visibility === 'draft')
 const { loggedIn } = useMe()
+const { counts } = usePresence()
+const live = computed(() => counts.value[props.game.slug] ?? 0)
 const playTo = computed(() => (loggedIn.value ? `/play/${props.game.slug}` : { path: '/login', query: { redirect: `/play/${props.game.slug}` } }))
 </script>
 
@@ -33,6 +35,9 @@ const playTo = computed(() => (loggedIn.value ? `/play/${props.game.slug}` : { p
                 <span class="flex size-11 items-center justify-center rounded-full bg-background/85 text-foreground shadow-lg backdrop-blur"><Play class="size-5 translate-x-px fill-current" /></span>
             </span>
             <div class="absolute right-2 top-2 flex flex-wrap justify-end gap-1">
+                <Badge v-if="live" variant="outline" class="gap-1.5 bg-background/75 backdrop-blur" :title="`${live} playing now`">
+                    <span class="size-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" aria-hidden="true" />{{ live }} playing
+                </Badge>
                 <Badge v-if="isDraft" variant="secondary">Draft</Badge>
                 <Badge v-else-if="!game.app.verified" variant="secondary">New</Badge>
                 <Badge v-if="game.offline" variant="outline" class="bg-background/70 backdrop-blur">offline?</Badge>
