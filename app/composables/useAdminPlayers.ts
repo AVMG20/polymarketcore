@@ -4,7 +4,7 @@ import type { AdminPlayersResponse } from '#shared/types/api'
 
 export const ADMIN_PLAYERS_PAGE = 50
 
-/** Admin player list with a debounced name/email search, and one-time reset links. */
+/** Admin player list with a debounced name/email search, one-time reset links and admin roles. */
 export function useAdminPlayers() {
     const search = ref('')
     const q = refDebounced(search, 250)
@@ -38,5 +38,19 @@ export function useAdminPlayers() {
         }
     }
 
-    return { search, page, pages, players, total, pending, error, refresh, resetting, resetLink }
+    const changingRole = ref<string | null>(null)
+    /** Make a player an admin or a player again; refreshes the list. */
+    async function setAdmin(id: string, admin: boolean): Promise<void> {
+        changingRole.value = id
+        try {
+            await apiFetch(`/api/admin/players/${id}/admin`, { method: 'PUT', body: { admin } })
+            await refresh()
+        } catch (e) {
+            toast.error(apiErrorMessage(e, 'Could not change the role'))
+        } finally {
+            changingRole.value = null
+        }
+    }
+
+    return { search, page, pages, players, total, pending, error, refresh, resetting, resetLink, changingRole, setAdmin }
 }

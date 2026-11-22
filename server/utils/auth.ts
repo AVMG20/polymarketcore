@@ -7,6 +7,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import { checkImageUrl } from '#shared/app-urls'
 import { addDays, amsterdamDay } from '#shared/economy'
 import { grantWelcome } from '#server/utils/welcome'
+import { isEnvAdmin } from '#server/utils/admins'
 
 export const NAME_MAX_LENGTH = 30
 
@@ -136,14 +137,9 @@ export const auth = betterAuth({
 
 export type SessionUser = typeof auth.$Infer.Session.user
 
-const adminEmails = () => (process.env.ADMIN_EMAILS ?? '')
-    .split(',')
-    .map(e => e.trim().toLowerCase())
-    .filter(Boolean)
-
 /** Admin = role 'admin' or an email listed in ADMIN_EMAILS. */
 export function isAdmin(u: { role?: string | null, email?: string | null }): boolean {
-    return u.role === 'admin' || (!!u.email && adminEmails().includes(u.email.toLowerCase()))
+    return u.role === 'admin' || isEnvAdmin(u.email)
 }
 
 /** The effective role, with ADMIN_EMAILS applied. */

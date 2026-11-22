@@ -14,6 +14,7 @@ import type {
     SearchPlayer,
     StarTrack
 } from '#shared/types/api'
+import { isEnvAdmin } from '#server/utils/admins'
 import { appOrigin } from '#server/utils/apps'
 import { gameActivity, hotGames, weekPlaySeconds } from '#server/utils/play-stats'
 import { countedGame, gameCounts } from '#server/utils/stars'
@@ -243,7 +244,7 @@ export async function listPlayersForAdmin(options: { q?: string, limit: number, 
     const filter = like ? sql`where u.name ilike ${like} or u.email ilike ${like}` : sql``
     const result = await db.execute<AdminPlayerRow & Record<string, unknown>>(sql`
         with ${totalsCte()}
-        select u.id, u.name, u.email, u.image, u.emblem, u.prestige, u.gems, u.created_at,
+        select u.id, u.name, u.email, u.image, u.emblem, u.prestige, u.gems, u.role, u.created_at,
                coalesce(t.stars, 0)::int as stars, (count(*) over ())::int as total
         from ${user} u
         left join totals t on t.user_id = u.id
@@ -262,6 +263,8 @@ export async function listPlayersForAdmin(options: { q?: string, limit: number, 
             prestige: r.prestige,
             gems: r.gems,
             stars: r.stars,
+            admin: r.role === 'admin' || isEnvAdmin(r.email),
+            adminFixed: isEnvAdmin(r.email),
             createdAt: iso(r.created_at)!
         }))
     }
@@ -271,6 +274,7 @@ interface AdminPlayerRow extends PlayerRow {
     email: string
     gems: number
     stars: number
+    role: string
     total: number
     created_at: Date
 }
