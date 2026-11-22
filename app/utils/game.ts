@@ -81,7 +81,7 @@ import {
     Zap
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
-import type { GameIconName } from '#shared/game-icons'
+import { isInlineSvg, svgDataUrl, type GameIconName } from '#shared/game-icons'
 
 /** Components for shared/game-icons.ts; the manifest only accepts these names. */
 const ICONS: Record<GameIconName, Component> = {
@@ -168,8 +168,9 @@ const ICONS: Record<GameIconName, Component> = {
     'zap': Zap
 }
 
-/** `lucide:name` → component, a URL → `{ src }`, otherwise the gamepad fallback. */
+/** `lucide:name` → component, a URL or inline SVG → `{ src }`, otherwise the gamepad fallback. */
 export function resolveGameIcon(icon: string | null | undefined): { component: Component } | { src: string } {
+    if (icon && isInlineSvg(icon)) return { src: svgDataUrl(icon) }
     if (icon?.startsWith('lucide:')) return { component: ICONS[icon.slice(7) as GameIconName] ?? Gamepad2 }
     if (icon && /^(https?:\/\/|\/)/.test(icon)) return { src: icon }
     return { component: Gamepad2 }

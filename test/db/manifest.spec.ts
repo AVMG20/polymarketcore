@@ -22,6 +22,11 @@ describe('manifest', () => {
         expect(parse('lucide:crosshair').success).toBe(true)
         expect(parse('https://example.com/icon.png').success).toBe(true)
         expect(parse('lucide:not-an-icon').error?.issues[0]?.message).toMatch(/not available/)
+        const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`
+        expect(parse(svg('<rect width="64" height="64" fill="#123"/>')).success).toBe(true)
+        expect(parse(svg('<script>alert(1)</script>')).success).toBe(false)
+        expect(parse(svg('<rect onload="x()"/>')).success).toBe(false)
+        expect(parse(svg(`<!--${'x'.repeat(17_000)}-->`)).success).toBe(false)
     })
 
     it('10 parallel manifests from two apps claiming one slug leave one owner', async () => {

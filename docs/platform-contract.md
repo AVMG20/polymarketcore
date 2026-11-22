@@ -162,7 +162,7 @@ clears it, omitted leaves it as it is).
       "tagline": "Slots, tables and high rollers",
       "description": "Markdown allowed",
       "playPath": "/",
-      "icon": "https://…/icon.png or a lucide icon name like lucide:dices",
+      "icon": "https://…/icon.png, inline <svg …>…</svg>, or a lucide icon name like lucide:dices",
       "cover": "https image url or null",
       "accent": "#e0a100",
       "visibility": "public",
@@ -176,7 +176,7 @@ clears it, omitted leaves it as it is).
 
 Rules: 0-10 stars per game, `key` is `[a-z0-9-]{1,40}`. Entry n names **level n** (its name and what it
 takes); the number declared is the game's max level, and level n pays n gems the first time a player
-reaches it. `icon` and `cover` are https URLs (http only on localhost); `icon` may instead be `lucide:<name>` from this list (anything else is refused): anchor, atom, axe, bike, biohazard, bird, blocks, bomb, bot, brain, bug, building, car, castle, cat, cherry, circle-dot, club, coins, compass, cpu, crosshair, crown, diamond, dices, dog, drum, egg, factory, feather, fish, flag, flame, footprints, gamepad, gamepad-2, gem, ghost, grid-3x3, guitar, hammer, heart, hourglass, joystick, key, leaf, lock, map, moon, mountain, music, orbit, palette, pickaxe, pizza, plane, puzzle, rabbit, rocket, satellite, shapes, shell, shield, ship, skull, snowflake, spade, sparkles, sprout, star, sun, sword, swords, target, tent, timer, tree-pine, trophy, turtle, wand, zap.
+reaches it. `icon` and `cover` are https URLs (http only on localhost); `icon` may instead be inline SVG (`<svg xmlns="http://www.w3.org/2000/svg" …>…</svg>`, at most 16384 characters, no scripts, event handlers or `foreignObject`; the hub shows it as an image, square, filling the tile), or `lucide:<name>` from this list (anything else is refused): anchor, atom, axe, bike, biohazard, bird, blocks, bomb, bot, brain, bug, building, car, castle, cat, cherry, circle-dot, club, coins, compass, cpu, crosshair, crown, diamond, dices, dog, drum, egg, factory, feather, fish, flag, flame, footprints, gamepad, gamepad-2, gem, ghost, grid-3x3, guitar, hammer, heart, hourglass, joystick, key, leaf, lock, map, moon, mountain, music, orbit, palette, pickaxe, pizza, plane, puzzle, rabbit, rocket, satellite, shapes, shell, shield, ship, skull, snowflake, spade, sparkles, sprout, star, sun, sword, swords, target, tent, timer, tree-pine, trophy, turtle, wand, zap.
 `visibility` defaults to `draft` for unverified apps and `public` for verified ones.
 Response: `{ games: [{ slug, stars: number, visibility }] }`.
 

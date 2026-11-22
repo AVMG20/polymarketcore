@@ -5,7 +5,7 @@ import { db } from '#server/database/index'
 import { apps, games, gameStars } from '#server/database/schema'
 import { checkImageUrl, checkRepoUrl } from '#shared/app-urls'
 import { MAX_STARS_PER_GAME } from '#shared/economy'
-import { GAME_ICON_NAMES } from '#shared/game-icons'
+import { GAME_ICON_NAMES, inlineSvgProblem, isInlineSvg } from '#shared/game-icons'
 
 export const SLUG_PATTERN = /^[a-z0-9-]{2,40}$/
 export const STAR_KEY_PATTERN = /^[a-z0-9-]{1,40}$/
@@ -16,12 +16,17 @@ const optionalText = (field: string, max: number) => z.string().max(max, `${fiel
 
 const imageUrl = (field: string) => z.string().nullish().superRefine((v, ctx) => {
     if (v == null) return
+    if (field === 'icon' && isInlineSvg(v)) {
+        const problem = inlineSvgProblem(v)
+        if (problem) ctx.addIssue({ code: 'custom', message: problem })
+        return
+    }
     if (field === 'icon' && v.startsWith('lucide:')) {
-        if (!(GAME_ICON_NAMES as readonly string[]).includes(v.slice(7))) ctx.addIssue({ code: 'custom', message: `icon ${v} is not available; use one of ${GAME_ICON_NAMES.map(n => `lucide:${n}`).join(', ')}, or an image URL` })
+        if (!(GAME_ICON_NAMES as readonly string[]).includes(v.slice(7))) ctx.addIssue({ code: 'custom', message: `icon ${v} is not available; use one of ${GAME_ICON_NAMES.map(n => `lucide:${n}`).join(', ')}, an image URL or inline SVG` })
         return
     }
     const check = checkImageUrl(v, field)
-    if (!check.ok) ctx.addIssue({ code: 'custom', message: field === 'icon' ? `${check.error} (or a lucide icon name like lucide:dices)` : check.error })
+    if (!check.ok) ctx.addIssue({ code: 'custom', message: field === 'icon' ? `${check.error} (or a lucide icon name like lucide:dices, or inline SVG)` : check.error })
 }).transform(v => v ?? null)
 
 /** `repoUrl`: an https URL, or null (or '') to clear it. */

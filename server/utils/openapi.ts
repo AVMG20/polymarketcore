@@ -81,7 +81,7 @@ export function openApiSpec(hubUrl: string) {
                     tagline: nullable(str({ maxLength: 120 })),
                     description: nullable(str({ description: 'Markdown' })),
                     playPath: str({ pattern: '^/[^#\\s\\\\]*$', maxLength: 500, default: '/', description: 'Appended to baseUrl; no # (the hub adds #pnx=<token>)' }),
-                    icon: nullable(str({ description: 'https image URL, or lucide:<name> from the list in the platform contract (e.g. lucide:dices)' })),
+                    icon: nullable(str({ description: 'https image URL, inline SVG (<svg xmlns="http://www.w3.org/2000/svg" …>, at most 16384 characters), or lucide:<name> from the list in the platform contract (e.g. lucide:dices)' })),
                     cover: nullable(str({ description: 'https image URL' })),
                     accent: nullable(str({ pattern: '^#[0-9a-fA-F]{6}$' })),
                     visibility: str({ enum: ['draft', 'public'], description: 'Default draft for unverified apps, public for verified' }),
