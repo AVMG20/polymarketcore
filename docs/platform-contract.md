@@ -36,7 +36,8 @@ Daily claim: the hub stores `claimed_through` (a date). Claimable = `min(CLAIM_C
 (a new account starts with `claimed_through = yesterday`, so day one is claimable). Claiming locks the row
 (`SELECT … FOR UPDATE`), pays the pile, sets `claimed_through = today`.
 
-Titles by total stars (fixed, never percentages): 0 Newcomer, 10 Regular, 25 Veteran, 50 Legend, 80 Mythic.
+Titles by total stars (fixed, never percentages): 0 Newcomer, 5 Rookie, 10 Regular, 20 Contender, 30 Veteran,
+40 Expert, 50 Elite, 60 Master, 70 Champion, 80 Legend, 90 Mythic, 100 Immortal.
 Titles follow the current total, so they can drop.
 
 Price guide for apps (players earn 10 gems a day): small boost 3-5 gems, meaningful unlock 30-70, never above ~200.

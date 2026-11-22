@@ -82,19 +82,21 @@ describe('claimableDays', () => {
 describe('titles', () => {
     it('uses fixed star thresholds', () => {
         expect(titleFor(0)).toBe('Newcomer')
-        expect(titleFor(9)).toBe('Newcomer')
+        expect(titleFor(4)).toBe('Newcomer')
+        expect(titleFor(5)).toBe('Rookie')
         expect(titleFor(10)).toBe('Regular')
-        expect(titleFor(24)).toBe('Regular')
-        expect(titleFor(25)).toBe('Veteran')
-        expect(titleFor(50)).toBe('Legend')
-        expect(titleFor(79)).toBe('Legend')
-        expect(titleFor(80)).toBe('Mythic')
-        expect(titleFor(500)).toBe('Mythic')
+        expect(titleFor(29)).toBe('Contender')
+        expect(titleFor(30)).toBe('Veteran')
+        expect(titleFor(80)).toBe('Legend')
+        expect(titleFor(99)).toBe('Mythic')
+        expect(titleFor(100)).toBe('Immortal')
+        expect(titleFor(500)).toBe('Immortal')
     })
 
     it('reports the next title and the stars it takes', () => {
-        expect(nextTitle(3)).toEqual({ name: 'Regular', stars: 10, remaining: 7 })
-        expect(nextTitle(80)).toBeNull()
+        expect(nextTitle(3)).toEqual({ name: 'Rookie', stars: 5, remaining: 2 })
+        expect(nextTitle(99)).toEqual({ name: 'Immortal', stars: 100, remaining: 1 })
+        expect(nextTitle(100)).toBeNull()
     })
 })
 

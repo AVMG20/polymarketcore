@@ -26,10 +26,17 @@ export const DAY_TIME_ZONE = 'Europe/Amsterdam'
 /** Star titles by total stars, lowest first. Fixed counts, never percentages. */
 export const TITLES = [
     { name: 'Newcomer', stars: 0 },
+    { name: 'Rookie', stars: 5 },
     { name: 'Regular', stars: 10 },
-    { name: 'Veteran', stars: 25 },
-    { name: 'Legend', stars: 50 },
-    { name: 'Mythic', stars: 80 }
+    { name: 'Contender', stars: 20 },
+    { name: 'Veteran', stars: 30 },
+    { name: 'Expert', stars: 40 },
+    { name: 'Elite', stars: 50 },
+    { name: 'Master', stars: 60 },
+    { name: 'Champion', stars: 70 },
+    { name: 'Legend', stars: 80 },
+    { name: 'Mythic', stars: 90 },
+    { name: 'Immortal', stars: 100 }
 ] as const
 
 export type TitleName = typeof TITLES[number]['name']
