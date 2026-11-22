@@ -44,8 +44,9 @@ const playTo = computed(() => (loggedIn.value ? `/play/${props.game.slug}` : { p
                 <Badge v-if="game.offline" variant="outline" class="bg-background/70 backdrop-blur">offline?</Badge>
             </div>
         </div>
-        <div class="relative -mt-7 px-4 pb-4">
-            <PnxGameIcon :icon="game.icon" :accent="accent" :name="game.name" class="ring-4 ring-card" />
+        <!-- Not positioned, so the title link's stretched ::after covers the whole card, cover included. -->
+        <div class="-mt-7 px-4 pb-4">
+            <PnxGameIcon :icon="game.icon" :accent="accent" :name="game.name" class="relative ring-4 ring-card" />
             <h3 class="mt-2 truncate font-display text-lg font-bold leading-tight">
                 <!-- Stretched over the whole card: a click anywhere plays. -->
                 <NuxtLink
