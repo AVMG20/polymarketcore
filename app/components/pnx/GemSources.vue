@@ -80,7 +80,7 @@ function toggle(s: GemStatsSource | null) {
                             <span class="tabular shrink-0 font-medium">{{ formatNumber(row.amount) }}</span>
                             <span class="tabular w-9 shrink-0 text-right text-xs text-muted-foreground">{{ pct(row.share) }}</span>
                         </span>
-                        <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted group-hover:bg-background" aria-hidden="true">
+                        <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-foreground/10" aria-hidden="true">
                             <span class="block h-full rounded-r-[4px]" :class="g.color" :style="{ width: `${Math.max(row.share * 100, row.amount ? 1.5 : 0)}%` }" />
                         </span>
                     </component>

@@ -155,8 +155,8 @@ const summary = computed(() => {
             <ul class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" aria-label="Legend">
                 <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-chart-in" aria-hidden="true" />In</li>
                 <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-[3px] bg-chart-out" aria-hidden="true" />Out</li>
-                <li class="flex items-center gap-1.5"><span class="h-0.5 w-3 rounded-full bg-foreground/75" aria-hidden="true" />Net</li>
-                <li class="flex items-center gap-1.5"><span class="h-0.5 w-3 rounded-full bg-chart-in" aria-hidden="true" />Balance</li>
+                <li class="flex items-center gap-1.5"><span class="h-0.5 w-3 rounded-full bg-muted-foreground" aria-hidden="true" />Net</li>
+                <li class="flex items-center gap-1.5"><span class="h-0.5 w-3 rounded-full bg-chart-balance" aria-hidden="true" />Balance</li>
             </ul>
             <button
                 type="button"
@@ -226,19 +226,19 @@ const summary = computed(() => {
                 <!-- in/out bars, net line -->
                 <path v-for="(d, i) in inBars" :key="`in${i}`" :d="d" fill="var(--chart-in)" :opacity="active === null || active === i ? 1 : 0.4" />
                 <path v-for="(d, i) in outBars" :key="`out${i}`" :d="d" fill="var(--chart-out)" :opacity="active === null || active === i ? 1 : 0.4" />
-                <polyline v-if="!empty" :points="netLine" fill="none" stroke="color-mix(in oklch, var(--foreground) 75%, transparent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <polyline v-if="!empty" :points="netLine" fill="none" stroke="var(--muted-foreground)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" />
 
                 <!-- balance -->
-                <path :d="balArea" fill="var(--chart-in)" fill-opacity="0.1" />
-                <polyline :points="balLine" fill="none" stroke="var(--chart-in)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
+                <path :d="balArea" fill="var(--chart-balance)" fill-opacity="0.12" />
+                <polyline :points="balLine" fill="none" stroke="var(--chart-balance)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" />
 
                 <text v-if="empty" :x="LEFT + plotW / 2" :y="flowTop + FLOW_H / 2" text-anchor="middle" class="fill-muted-foreground text-sm">No moves</text>
 
                 <!-- crosshair -->
                 <g v-if="current && active !== null">
                     <line :x1="cx(active)" :x2="cx(active)" :y1="flowTop" :y2="balBase" stroke="var(--muted-foreground)" stroke-opacity="0.6" stroke-width="1" />
-                    <circle :cx="cx(active)" :cy="y(current.net)" r="4" fill="color-mix(in oklch, var(--foreground) 85%, var(--card))" stroke="var(--card)" stroke-width="2" />
-                    <circle :cx="cx(active)" :cy="yb(current.balance)" r="4" fill="var(--chart-in)" stroke="var(--card)" stroke-width="2" />
+                    <circle :cx="cx(active)" :cy="y(current.net)" r="4" fill="var(--muted-foreground)" stroke="var(--card)" stroke-width="2" />
+                    <circle :cx="cx(active)" :cy="yb(current.balance)" r="4" fill="var(--chart-balance)" stroke="var(--card)" stroke-width="2" />
                 </g>
             </svg>
 
@@ -254,9 +254,9 @@ const summary = computed(() => {
                     <dd class="tabular text-right font-semibold">{{ formatNumber(current.in, false) }}</dd>
                     <dt class="flex items-center gap-1.5 text-muted-foreground"><span class="h-0.5 w-3 rounded-full bg-chart-out" aria-hidden="true" />Out</dt>
                     <dd class="tabular text-right font-semibold">{{ formatNumber(current.out, false) }}</dd>
-                    <dt class="flex items-center gap-1.5 text-muted-foreground"><span class="h-0.5 w-3 rounded-full bg-foreground/75" aria-hidden="true" />Net</dt>
+                    <dt class="flex items-center gap-1.5 text-muted-foreground"><span class="h-0.5 w-3 rounded-full bg-muted-foreground" aria-hidden="true" />Net</dt>
                     <dd class="tabular text-right font-semibold">{{ signed(current.net) }}</dd>
-                    <dt class="flex items-center gap-1.5 text-muted-foreground"><span class="h-0.5 w-3 rounded-full bg-chart-in" aria-hidden="true" />Balance</dt>
+                    <dt class="flex items-center gap-1.5 text-muted-foreground"><span class="h-0.5 w-3 rounded-full bg-chart-balance" aria-hidden="true" />Balance</dt>
                     <dd class="tabular text-right font-semibold">{{ formatNumber(current.balance, false) }}</dd>
                 </dl>
             </div>
