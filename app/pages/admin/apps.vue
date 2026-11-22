@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Check, Code, Copy, Package, TriangleAlert } from 'lucide-vue-next'
+import { Check, CircleHelp, Code, Copy, Package, TriangleAlert } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { AppInfo } from '#shared/types/api'
 
 definePageMeta({ middleware: 'admin' })
@@ -154,7 +155,19 @@ async function runConfirm() {
                         <Input id="app-base" v-model="baseUrl" placeholder="http://localhost:3200" required />
                     </div>
                     <div class="space-y-2">
-                        <Label for="app-prefixes">Return URL prefixes</Label>
+                        <div class="flex items-center gap-1.5">
+                            <Label for="app-prefixes">Return URL prefixes</Label>
+                            <TooltipProvider :delay-duration="100">
+                                <Tooltip>
+                                    <TooltipTrigger as-child>
+                                        <button type="button" class="text-muted-foreground hover:text-foreground" aria-label="What are return URL prefixes?"><CircleHelp class="size-4" /></button>
+                                    </TooltipTrigger>
+                                    <TooltipContent class="max-w-64">
+                                        Where the hub may send players back after they sign in from the app's own site (not the iframe). Other URLs are refused. Separate several with commas.
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         <Input id="app-prefixes" v-model="prefixes" placeholder="http://localhost:3200/" required />
                     </div>
                     <div class="sm:col-span-2">
