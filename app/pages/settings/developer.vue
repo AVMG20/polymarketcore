@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Check, Copy, KeyRound, Package } from 'lucide-vue-next'
+import { Check, Copy, Github, KeyRound, Package, Pencil } from 'lucide-vue-next'
+import { isGithubUrl } from '#shared/app-urls'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -39,17 +40,38 @@ const disableOpen = computed({
         if (!open) disabling.value = null
     }
 })
-async function setStatus(app: AppInfo, status: 'active' | 'disabled') {
+async function patchApp(app: AppInfo, body: { status?: 'active' | 'disabled', repoUrl?: string | null }): Promise<boolean> {
     appBusy.value = app.id
     try {
-        const res = await apiFetch<{ app: AppInfo }>(`/api/me/apps/${encodeURIComponent(app.id)}`, { method: 'PATCH', body: { status } })
+        const res = await apiFetch<{ app: AppInfo }>(`/api/me/apps/${encodeURIComponent(app.id)}`, { method: 'PATCH', body })
         if (appsData.value) appsData.value = { apps: appsData.value.apps.map(a => (a.id === app.id ? res.app : a)) }
-        disabling.value = null
+        return true
     } catch (e) {
         toast.error(apiErrorMessage(e, 'Could not update the app'))
+        return false
     } finally {
         appBusy.value = null
     }
+}
+async function setStatus(app: AppInfo, status: 'active' | 'disabled') {
+    if (await patchApp(app, { status })) disabling.value = null
+}
+
+// Repo link (optional): shown on the app's game pages.
+const editingRepo = ref<AppInfo | null>(null)
+const repoInput = ref('')
+const repoOpen = computed({
+    get: () => !!editingRepo.value,
+    set: (open: boolean) => {
+        if (!open) editingRepo.value = null
+    }
+})
+function editRepo(app: AppInfo) {
+    repoInput.value = app.repoUrl ?? ''
+    editingRepo.value = app
+}
+async function saveRepo(value: string | null) {
+    if (editingRepo.value && await patchApp(editingRepo.value, { repoUrl: value?.trim() || null })) editingRepo.value = null
 }
 </script>
 
@@ -112,6 +134,20 @@ async function setStatus(app: AppInfo, status: 'active' | 'disabled') {
                     <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                         <dt class="text-muted-foreground">URL</dt>
                         <dd class="tabular break-all"><a :href="app.baseUrl" target="_blank" rel="noopener noreferrer" class="underline-offset-2 hover:underline">{{ app.baseUrl }}</a></dd>
+                        <dt class="text-muted-foreground">Repo</dt>
+                        <dd class="flex min-w-0 items-center gap-1.5">
+                            <a v-if="app.repoUrl" :href="app.repoUrl" target="_blank" rel="noopener noreferrer" class="tabular flex min-w-0 items-center gap-1 underline-offset-2 hover:underline">
+                                <Github v-if="isGithubUrl(app.repoUrl)" class="size-3.5 shrink-0" aria-hidden="true" /><span class="truncate">{{ app.repoUrl }}</span>
+                            </a>
+                            <span v-else class="text-muted-foreground">none</span>
+                            <button
+                                type="button"
+                                class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                                :aria-label="app.repoUrl ? 'Edit repo' : 'Add repo'"
+                                :title="app.repoUrl ? 'Edit repo' : 'Add repo'"
+                                @click="editRepo(app)"
+                            ><Pencil class="size-3" /></button>
+                        </dd>
                         <dt class="text-muted-foreground">Games</dt><dd class="tabular">{{ app.games }}</dd>
                         <dt class="text-muted-foreground">Seen</dt><dd>{{ app.lastSeenAt ? timeAgo(app.lastSeenAt) : 'never' }}</dd>
                     </dl>
@@ -141,6 +177,24 @@ async function setStatus(app: AppInfo, status: 'active' | 'disabled') {
                     <Button variant="outline" @click="disabling = null">Cancel</Button>
                     <Button variant="destructive" :disabled="!!appBusy" @click="disabling && setStatus(disabling, 'disabled')">Disable</Button>
                 </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <Dialog v-model:open="repoOpen">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Repo for {{ editingRepo?.name }}</DialogTitle>
+                    <DialogDescription>Optional. Linked on its game pages.</DialogDescription>
+                </DialogHeader>
+                <form class="grid gap-2" @submit.prevent="saveRepo(repoInput)">
+                    <Label for="repo-url">URL</Label>
+                    <Input id="repo-url" v-model="repoInput" type="url" inputmode="url" placeholder="https://github.com/me/my-game" maxlength="500" autocomplete="off" />
+                    <DialogFooter class="mt-2 gap-2">
+                        <Button v-if="editingRepo?.repoUrl" type="button" variant="ghost" class="text-destructive hover:text-destructive sm:mr-auto" :disabled="!!appBusy" @click="saveRepo(null)">Remove</Button>
+                        <Button type="button" variant="outline" @click="editingRepo = null">Cancel</Button>
+                        <Button type="submit" variant="chunky" :disabled="!!appBusy">Save</Button>
+                    </DialogFooter>
+                </form>
             </DialogContent>
         </Dialog>
 

@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { db } from '#server/database/index'
 import { apps } from '#server/database/schema'
-import { setOwnAppStatus, updateApp } from '#server/utils/app-registry'
+import { setOwnAppRepo, setOwnAppStatus, updateApp } from '#server/utils/app-registry'
 import { listGames } from '#server/utils/hub'
 import { MAX_DEVELOPER_APPS } from '#shared/economy'
 import { createAppWithGame, createPlayer } from './helpers'
@@ -48,5 +48,15 @@ describe('own apps', () => {
         await setOwnAppStatus(owner, appId, 'disabled')
         for (let i = 0; i < MAX_DEVELOPER_APPS; i++) await createAppWithGame(1, { ownerUserId: owner })
         await expect(setOwnAppStatus(owner, appId, 'active')).rejects.toMatchObject({ statusCode: 400 })
+    })
+
+    it('lets only the owner set and clear the repo URL', async () => {
+        const owner = await createPlayer()
+        const { appId } = await createAppWithGame(1, { ownerUserId: owner })
+        await setOwnAppRepo(owner, appId, 'https://github.com/me/my-game')
+        expect((await appRow(appId)).repoUrl).toBe('https://github.com/me/my-game')
+        await expect(setOwnAppRepo(await createPlayer(), appId, null)).rejects.toMatchObject({ statusCode: 404 })
+        await setOwnAppRepo(owner, appId, null)
+        expect((await appRow(appId)).repoUrl).toBeNull()
     })
 })

@@ -187,6 +187,14 @@ export async function setOwnAppStatus(userId: string, appId: string, status: 'ac
     })
 }
 
+/** The owner sets (or, with null, clears) their app's repo URL. */
+export async function setOwnAppRepo(userId: string, appId: string, repoUrl: string | null): Promise<void> {
+    const [updated] = await db.update(apps).set({ repoUrl })
+        .where(and(eq(apps.id, appId), eq(apps.ownerUserId, userId)))
+        .returning({ id: apps.id })
+    if (!updated) throw createError({ statusCode: 404, statusMessage: `App ${appId} not found among your apps` })
+}
+
 /** Replace the app's API key; the old one stops working at once. */
 export async function rotateAppKey(appId: string): Promise<{ app: AppRow, apiKey: string }> {
     const apiKey = generateApiKey()
