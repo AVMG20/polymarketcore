@@ -48,6 +48,9 @@ function onStar({ game, stars }: { game: string, stars: number }) {
     refreshGames().catch(() => null)
 }
 
+// Stars can change without a bridge message (an app syncs them at launch): refetch the list on the way out.
+onBeforeUnmount(() => void refreshGames().catch(() => null))
+
 const { gameTitle, sendHello } = usePnxBridge(iframe, () => launch.value?.app.origin, {
     // The app's session expired: fetch a fresh token; the new src reloads the iframe.
     onRelaunch: reload,
