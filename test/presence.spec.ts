@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PeakRow, SessionRow } from '#server/utils/play-stats'
-import { presenceClose, presenceCounts, presenceMessage, presenceOpen, presenceSave, resetPresence, setPlayStore, type PresencePeer } from '#server/utils/presence'
+import { presenceClose, presenceCounts, presenceMessage, presenceOpen, MAX_SESSION_MS, presenceSave, RATE_LIMIT, resetPresence, RESUME_MS, setPlayStore, type PresencePeer } from '#server/utils/presence'
 
 let n = 0
 function peer(): PresencePeer & { sent: string[] } {
@@ -72,21 +72,77 @@ describe('presence', () => {
         const p = peer()
         presenceOpen(p, 'erin')
         presenceMessage(p, JSON.stringify({ play: 'casino', active: true }))
+        expect(sessions.size).toBe(0) // nothing written per message
+        await presenceSave()
         expect([...sessions.values()]).toMatchObject([{ game: 'casino', userId: 'erin', activeSeconds: 0 }])
 
         vi.advanceTimersByTime(30_000)
         presenceMessage(p, JSON.stringify({ play: 'casino', active: false }))
         vi.advanceTimersByTime(60_000) // hidden: not counted
-        await presenceSave()
         presenceMessage(p, JSON.stringify({ play: 'casino', active: true }))
         vi.advanceTimersByTime(10_000)
         presenceClose(p)
+        await presenceSave()
         const [s] = [...sessions.values()]
         expect(s).toMatchObject({ game: 'casino', activeSeconds: 40 })
         expect(s!.endedAt.getTime() - s!.startedAt.getTime()).toBe(100_000)
     })
 
-    it('starts a new session when the game changes, none signed out', () => {
+    it('resumes a session on refresh instead of opening a new one', async () => {
+        vi.useFakeTimers()
+        for (let i = 0; i < 20; i++) {
+            const p = peer()
+            presenceOpen(p, 'rita')
+            presenceMessage(p, JSON.stringify({ play: 'casino' }))
+            vi.advanceTimersByTime(5_000)
+            presenceClose(p)
+            vi.advanceTimersByTime(1_000)
+        }
+        await presenceSave()
+        expect([...sessions.values()]).toMatchObject([{ game: 'casino', activeSeconds: 100 }])
+
+        vi.advanceTimersByTime(RESUME_MS)
+        const p = peer()
+        presenceOpen(p, 'rita')
+        presenceMessage(p, JSON.stringify({ play: 'casino' }))
+        await presenceSave()
+        expect(sessions.size).toBe(2)
+    })
+
+    it('shares one session between tabs and counts one game at a time', async () => {
+        vi.useFakeTimers()
+        const [a, b, c] = [peer(), peer(), peer()]
+        for (const p of [a, b, c]) presenceOpen(p, 'sam')
+        presenceMessage(a, JSON.stringify({ play: 'casino' }))
+        presenceMessage(b, JSON.stringify({ play: 'casino' }))
+        vi.advanceTimersByTime(10_000)
+        presenceMessage(c, JSON.stringify({ play: 'arcade' })) // focused last: only this one counts
+        vi.advanceTimersByTime(20_000)
+        await presenceSave()
+        const rows = [...sessions.values()]
+        expect(rows).toHaveLength(2)
+        expect(rows.find(r => r.game === 'casino')!.activeSeconds).toBe(10)
+        expect(rows.find(r => r.game === 'arcade')!.activeSeconds).toBe(20)
+
+        presenceClose(c) // back to the casino tabs
+        vi.advanceTimersByTime(5_000)
+        await presenceSave()
+        expect([...sessions.values()].find(r => r.game === 'casino')!.activeSeconds).toBe(15)
+    })
+
+    it('caps a session and ignores message floods', async () => {
+        vi.useFakeTimers()
+        const p = peer()
+        presenceOpen(p, 'tom')
+        presenceMessage(p, JSON.stringify({ play: 'casino' }))
+        vi.advanceTimersByTime(MAX_SESSION_MS + 60 * 60_000)
+        for (let i = 0; i < RATE_LIMIT; i++) presenceMessage(p, JSON.stringify({ play: 'casino', active: i % 2 === 0 }))
+        presenceMessage(p, JSON.stringify({ play: 'arcade' }))
+        await presenceSave()
+        expect([...sessions.values()]).toMatchObject([{ game: 'casino', activeSeconds: MAX_SESSION_MS / 1000 }])
+    })
+
+    it('starts a new session when the game changes, none signed out', async () => {
         const p = peer()
         const anon = peer()
         presenceOpen(p, 'finn')
@@ -94,6 +150,7 @@ describe('presence', () => {
         presenceMessage(p, JSON.stringify({ play: 'casino' }))
         presenceMessage(p, JSON.stringify({ play: 'arcade' }))
         presenceMessage(anon, JSON.stringify({ play: 'casino' }))
+        await presenceSave()
         expect([...sessions.values()].map(s => s.game)).toEqual(['casino', 'arcade'])
     })
 
