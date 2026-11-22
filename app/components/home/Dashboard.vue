@@ -20,26 +20,24 @@ const feedPreview = computed(() => (feed.value?.events ?? []).slice(0, 6))
             </div>
         </div>
 
-        <div class="grid gap-4 lg:grid-cols-5">
-            <Card class="gap-5 lg:col-span-3">
+        <div class="grid gap-4 lg:grid-cols-2">
+            <Card class="gap-5">
                 <CardContent class="space-y-5">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <PnxGemChip :amount="me.gems" :compact="false" size="lg" />
-                        <PnxStarChip :count="me.stars" size="lg" />
-                    </div>
+                    <PnxGemChip :amount="me.gems" :compact="false" size="lg" />
                     <hr class="border-t">
                     <PnxClaimPile />
-                    <hr class="border-t">
-                    <PnxTitleProgress :title="me.title" :stars="me.stars" :next="me.nextTitle" />
                 </CardContent>
             </Card>
 
-            <Card class="gap-3 lg:col-span-2">
+            <Card class="gap-3">
                 <CardContent>
-                    <div class="mb-1 flex items-center justify-between">
-                        <h2 class="text-lg">Your levels</h2>
+                    <div class="mb-3 flex items-center justify-between gap-2">
+                        <PnxStarChip :count="me.stars" size="lg" />
                         <NuxtLink :to="`/players/${me.id}`" class="text-sm font-medium text-primary">Profile</NuxtLink>
                     </div>
+                    <PnxTitleProgress :title="me.title" :stars="me.stars" :next="me.nextTitle" />
+                    <hr class="my-4 border-t">
+                    <h2 class="mb-1 text-lg">Your levels</h2>
                     <PnxFeedSkeleton v-if="profilePending" :rows="3" />
                     <ul v-else-if="recentStars.length" class="divide-y">
                         <PnxFeedItem v-for="e in recentStars" :key="e.id" :event="e" hide-player />
