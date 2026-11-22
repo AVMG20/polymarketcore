@@ -59,4 +59,6 @@ export function useAuthActions() {
 
 /** Public hub settings (`GET /api/config`). */
 export const useHubConfig = () =>
-    useAsyncData('pnx-config', () => apiFetch<{ discord: boolean }>('/api/config'))
+    useAsyncData('pnx-config', () => apiFetch<{ discord: boolean }>('/api/config'), {
+        getCachedData: (key, nuxtApp) => nuxtApp.payload.data[key] ?? nuxtApp.static.data[key]
+    })

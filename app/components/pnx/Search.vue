@@ -15,7 +15,12 @@ const { data: cachedGames } = useNuxtData<GamesResponse>('pnx-games')
 const fetchedGames = ref<GamesResponse | null>(null)
 const gamesData = computed(() => cachedGames.value ?? fetchedGames.value)
 const players = ref<SearchPlayer[]>([])
-const isMac = ref(false)
+const isMac = useState('pnx-is-mac', () => {
+    const ua = import.meta.server
+        ? (useRequestHeaders(['user-agent'])['user-agent'] ?? '')
+        : (navigator.platform || navigator.userAgent)
+    return /Mac|iPhone|iPad/i.test(ua)
+})
 
 interface Item {
     key: string
@@ -151,7 +156,6 @@ function onGlobalKey(e: KeyboardEvent) {
     }
 }
 onMounted(() => {
-    isMac.value = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent)
     window.addEventListener('keydown', onGlobalKey)
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', onGlobalKey))
