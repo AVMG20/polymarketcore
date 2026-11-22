@@ -53,9 +53,11 @@ describe('play stats', () => {
         const quiet = await createAppWithGame(1)
         const unverified = await createAppWithGame(1, { verified: false })
         const players = await Promise.all([1, 2, 3].map(() => createPlayer()))
+        // The test DB keeps earlier runs' games: grow with the clock so this run's game always tops them.
+        const big = Math.floor(Date.now() / 1000) - 1_700_000_000
         for (const p of players) {
-            await play(busy.game, p, 400_000)
-            await play(unverified.game, p, 500_000)
+            await play(busy.game, p, big)
+            await play(unverified.game, p, big + 1000)
         }
         await play(quiet.game, players[0]!, 4000, 30) // over a day ago: never hot
         const hot = await hotGames()
@@ -65,7 +67,7 @@ describe('play stats', () => {
 
         const listed = await listGames(null)
         const byslug = new Map(listed.map(g => [g.slug, g]))
-        expect(byslug.get(busy.game)).toMatchObject({ playSeconds: 1_200_000, hot: true })
+        expect(byslug.get(busy.game)).toMatchObject({ playSeconds: big * 3, hot: true })
         expect(byslug.get(quiet.game)).toMatchObject({ playSeconds: 4000, hot: false })
 
         const detail = await getGameDetail(quiet.game, null)
