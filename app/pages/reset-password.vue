@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Check } from 'lucide-vue-next'
+import { AlertCircle, Check, Loader2 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
 useHead({ title: 'New password · Polynux' })
@@ -37,30 +35,75 @@ async function submit() {
 </script>
 
 <template>
-    <div class="mx-auto max-w-sm pt-2 sm:pt-12">
-        <Card class="rounded-2xl">
-            <CardHeader><CardTitle class="font-display text-2xl">Choose a new password</CardTitle></CardHeader>
-            <CardContent>
-                <div v-if="done" class="flex flex-col items-center gap-4 py-2 text-center">
-                    <span class="flex size-12 items-center justify-center rounded-2xl bg-success/15 text-success"><Check class="size-6" aria-hidden="true" /></span>
-                    <p class="font-display text-lg font-bold" role="status">Password changed</p>
-                    <Button variant="chunky" class="w-full" as-child><NuxtLink to="/login">Sign in</NuxtLink></Button>
-                </div>
-                <p v-else-if="!token" class="text-sm text-destructive" role="alert">Invalid link</p>
-                <form v-else class="space-y-4" @submit.prevent="submit">
-                    <div class="space-y-2">
-                        <Label for="password">New password</Label>
-                        <Input id="password" v-model="password" type="password" minlength="8" autocomplete="new-password" required />
-                    </div>
-                    <div class="space-y-2">
-                        <Label for="confirm">Confirm password</Label>
-                        <Input id="confirm" v-model="confirm" type="password" minlength="8" autocomplete="new-password" :aria-invalid="mismatch || undefined" required />
-                    </div>
-                    <p v-if="mismatch" class="text-sm text-destructive" role="alert">Passwords don't match</p>
-                    <p v-else-if="error" class="text-sm text-destructive" role="alert">{{ error }}</p>
-                    <Button type="submit" variant="chunky" class="w-full" :disabled="pending || mismatch">Save password</Button>
-                </form>
-            </CardContent>
-        </Card>
-    </div>
+    <PnxAuthCard :title="done ? 'Password changed' : 'New password'">
+        <div v-if="done" class="flex flex-col items-center gap-5 pt-1 text-center">
+            <span class="flex size-12 items-center justify-center rounded-2xl bg-success/15 text-success ring-1 ring-inset ring-success/25">
+                <Check class="size-6" aria-hidden="true" />
+            </span>
+            <p class="sr-only" role="status">Password changed</p>
+            <Button variant="chunky" size="lg" class="w-full text-[15px]" as-child>
+                <NuxtLink to="/login">Sign in</NuxtLink>
+            </Button>
+        </div>
+
+        <div v-else-if="!token" class="space-y-4">
+            <div
+                role="alert"
+                class="flex items-center justify-center gap-2 rounded-sm border border-destructive/25 bg-destructive/10 px-3.5 py-3 text-sm text-destructive"
+            >
+                <AlertCircle class="size-4 shrink-0" aria-hidden="true" />
+                <span>Invalid link</span>
+            </div>
+            <Button variant="outline" size="lg" class="w-full rounded-xl" as-child>
+                <NuxtLink to="/login">Back to sign in</NuxtLink>
+            </Button>
+        </div>
+
+        <form v-else class="space-y-4" @submit.prevent="submit">
+            <div class="space-y-1.5">
+                <Label for="password" class="text-[13px] font-medium text-foreground/90">New password</Label>
+                <PnxPasswordInput
+                    id="password"
+                    v-model="password"
+                    minlength="8"
+                    autocomplete="new-password"
+                    placeholder="At least 8 characters"
+                    required
+                />
+            </div>
+
+            <div class="space-y-1.5">
+                <Label for="confirm" class="text-[13px] font-medium text-foreground/90">Confirm password</Label>
+                <PnxPasswordInput
+                    id="confirm"
+                    v-model="confirm"
+                    minlength="8"
+                    autocomplete="new-password"
+                    placeholder="Repeat password"
+                    :aria-invalid="mismatch || undefined"
+                    required
+                />
+            </div>
+
+            <div
+                v-if="mismatch || error"
+                role="alert"
+                class="flex items-start gap-2 rounded-sm border border-destructive/25 bg-destructive/10 px-3.5 py-2.5 text-sm text-destructive"
+            >
+                <AlertCircle class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                <span>{{ mismatch ? "Passwords don't match" : error }}</span>
+            </div>
+
+            <Button type="submit" variant="chunky" size="lg" class="mt-1 w-full text-[15px]" :disabled="pending || mismatch">
+                <Loader2 v-if="pending" class="size-4 animate-spin" aria-hidden="true" />
+                Save password
+            </Button>
+        </form>
+
+        <template v-if="!done && token" #footer>
+            <NuxtLink to="/login" class="font-medium text-primary underline-offset-4 hover:underline">
+                Back to sign in
+            </NuxtLink>
+        </template>
+    </PnxAuthCard>
 </template>
