@@ -425,7 +425,7 @@ export interface TestLaunchResponse {
 
 /** `GET /api/admin/players?q&limit&offset` (admin): players newest first, `stars` is the counted total. */
 export interface AdminPlayersResponse {
-    /** `adminFixed`: an ADMIN_EMAILS admin, which the role can't change. */
+    /** `email` is masked (`rij****@hotmail.com`). `adminFixed`: an ADMIN_EMAILS admin, which the role can't change. */
     players: (PlayerRef & { email: string, gems: number, stars: number, admin: boolean, adminFixed: boolean, createdAt: string })[]
     total: number
 }

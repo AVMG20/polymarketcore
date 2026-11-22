@@ -237,6 +237,13 @@ export async function getLeaderboard(viewerId: string | null, limit = 100, offse
 }
 
 /** Admin player list: name or email search, newest first. Stars are the counted total. */
+/** `rij****@hotmail.com`: enough to recognise someone, not to collect addresses. */
+export function maskEmail(email: string): string {
+    const at = email.lastIndexOf('@')
+    if (at < 0) return `${email.slice(0, 3)}****`
+    return `${email.slice(0, Math.min(3, at))}****${email.slice(at)}`
+}
+
 export async function listPlayersForAdmin(options: { q?: string, limit: number, offset: number }): Promise<AdminPlayersResponse> {
     const term = options.q?.trim()
     // Escape LIKE wildcards so a search for "%" or "_" matches literally.
@@ -257,7 +264,7 @@ export async function listPlayersForAdmin(options: { q?: string, limit: number, 
         players: result.rows.map(r => ({
             id: r.id,
             name: r.name,
-            email: r.email,
+            email: maskEmail(r.email),
             image: r.image,
             emblem: r.emblem,
             prestige: r.prestige,

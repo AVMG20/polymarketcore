@@ -25,10 +25,10 @@ export function useAdminPlayers() {
 
     const resetting = ref<string | null>(null)
     /** A one-time password reset link for a player; null (and a toast) on failure. */
-    async function resetLink(email: string): Promise<string | null> {
-        resetting.value = email
+    async function resetLink(playerId: string): Promise<string | null> {
+        resetting.value = playerId
         try {
-            const res = await apiFetch<{ url: string }>('/api/admin/password-reset', { method: 'POST', body: { email } })
+            const res = await apiFetch<{ url: string }>('/api/admin/password-reset', { method: 'POST', body: { playerId } })
             return res.url
         } catch (e) {
             toast.error(apiErrorMessage(e, 'Could not create a reset link'))

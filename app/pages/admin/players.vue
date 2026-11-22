@@ -22,8 +22,8 @@ const linkOpen = computed({
         if (!open) link.value = null
     }
 })
-async function makeLink(p: { name: string, email: string }) {
-    const url = await resetLink(p.email)
+async function makeLink(p: { id: string, name: string }) {
+    const url = await resetLink(p.id)
     if (url) link.value = { name: p.name, url }
 }
 
@@ -107,7 +107,7 @@ const joined = (iso: string) => new Date(iso).toLocaleDateString('en', { day: 'n
                                     </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger as-child>
-                                            <Button size="icon-sm" variant="ghost" aria-label="Create reset link" :disabled="resetting === p.email" @click="makeLink(p)"><KeyRound /></Button>
+                                            <Button size="icon-sm" variant="ghost" aria-label="Create reset link" :disabled="resetting === p.id" @click="makeLink(p)"><KeyRound /></Button>
                                         </TooltipTrigger>
                                         <TooltipContent>Reset link</TooltipContent>
                                     </Tooltip>
