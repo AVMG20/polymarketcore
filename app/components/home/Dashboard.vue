@@ -6,7 +6,8 @@ const { data: gamesData, pending: gamesPending, error: gamesError, refresh: refr
 const { data: profile, pending: profilePending } = usePlayerProfile(() => me.value?.id ?? '')
 const { data: feed, pending: feedPending } = useFeed()
 
-const games = computed(() => gamesData.value?.games ?? [])
+// The player's own order from the games page ("Mine"); games they never placed follow in hub order.
+const games = computed(() => applyOrder(gamesData.value?.games ?? [], gamesData.value?.order ?? []))
 const recentStars = computed(() => (profile.value?.recent ?? []).filter(e => e.type === 'star').slice(0, 4))
 const feedPreview = computed(() => (feed.value?.events ?? []).slice(0, 6))
 </script>
@@ -47,7 +48,7 @@ const feedPreview = computed(() => (feed.value?.events ?? []).slice(0, 6))
             </Card>
         </div>
 
-        <PnxGamesGrid :games="games" :pending="gamesPending" :error="!!gamesError" @retry="refreshGames()" />
+        <PnxGamesGrid :games="games" :pending="gamesPending" :error="!!gamesError" :limit="6" more-to="/games" @retry="refreshGames()" />
 
         <section>
             <Card class="gap-3">

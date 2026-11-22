@@ -11,15 +11,29 @@ import type { GameSummary } from '#shared/types/api'
  * `editing`: cards move by drag (pointer events, so touch works: from the grip
  * on touch, anywhere with a mouse) or with the arrow buttons and keys. Every
  * move emits `move(slug, toSlug)` within a section; the parent reorders.
+ * `limit` caps the cards shown across all sections (in section order); when
+ * some are cut, the first heading links to `moreTo`.
  */
-const props = defineProps<{ games: GameSummary[], pending?: boolean, error?: boolean, untitledFirst?: boolean, editing?: boolean }>()
+const props = defineProps<{ games: GameSummary[], pending?: boolean, error?: boolean, untitledFirst?: boolean, editing?: boolean, limit?: number, moreTo?: string }>()
 const emit = defineEmits<{ retry: [], move: [slug: string, to: string] }>()
 
-const sections = computed(() => [
+const allSections = computed(() => [
     { key: 'games', title: 'Games', note: '', games: props.games.filter(g => g.visibility === 'public' && g.app.verified) },
     { key: 'new', title: 'New', note: "Stars don't count yet", games: props.games.filter(g => g.visibility === 'public' && !g.app.verified) },
     { key: 'drafts', title: 'Your drafts', note: 'Only you', games: props.games.filter(g => g.visibility === 'draft') }
 ].filter(s => s.games.length > 0))
+
+const sections = computed(() => {
+    let left = props.limit ?? Number.POSITIVE_INFINITY
+    return allSections.value
+        .map((s) => {
+            const games = s.games.slice(0, Math.max(0, left))
+            left -= games.length
+            return { ...s, games }
+        })
+        .filter(s => s.games.length > 0)
+})
+const truncated = computed(() => allSections.value.reduce((n, s) => n + s.games.length, 0) > sections.value.reduce((n, s) => n + s.games.length, 0))
 
 const sectionOf = (slug: string) => sections.value.find(s => s.games.some(g => g.slug === slug))?.games ?? []
 
@@ -178,6 +192,7 @@ onBeforeUnmount(stopDrag)
             <div v-if="!(untitledFirst && si === 0 && section.key === 'games')" class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                 <h2 class="text-xl">{{ section.title }}</h2>
                 <p v-if="section.note" class="text-sm text-muted-foreground">{{ section.note }}</p>
+                <NuxtLink v-if="si === 0 && truncated && moreTo" :to="moreTo" class="ml-auto text-sm font-medium text-primary">See all</NuxtLink>
             </div>
             <div class="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-3" :class="editing ? 'select-none' : ''">
                 <div
