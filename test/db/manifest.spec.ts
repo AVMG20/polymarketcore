@@ -17,6 +17,13 @@ describe('manifest', () => {
         expect(manifestSchema.safeParse({ games: [{ slug: 'ok-slug', name: 'G', playPath: '/play?x=1' }] }).success).toBe(true)
     })
 
+    it('takes listed lucide icons and image URLs, refuses other icon names', () => {
+        const parse = (icon: string) => manifestSchema.safeParse({ games: [{ slug: 'ok-slug', name: 'G', icon }] })
+        expect(parse('lucide:crosshair').success).toBe(true)
+        expect(parse('https://example.com/icon.png').success).toBe(true)
+        expect(parse('lucide:not-an-icon').error?.issues[0]?.message).toMatch(/not available/)
+    })
+
     it('10 parallel manifests from two apps claiming one slug leave one owner', async () => {
         const a = await createAppWithGame()
         const b = await createAppWithGame()
