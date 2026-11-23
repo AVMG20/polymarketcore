@@ -56,7 +56,7 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                 <template v-if="me">
                     <NuxtLink to="/gems" data-pnx-wallet class="rounded-full" aria-label="Gem history"><PnxGemChip :amount="me.gems" /></NuxtLink>
                     <NuxtLink :to="`/players/${me.id}`" class="rounded-full" aria-label="Your profile"><PnxStarChip :count="me.stars" /></NuxtLink>
-                    <DropdownMenu>
+                    <DropdownMenu :modal="false">
                         <DropdownMenuTrigger as-child>
                             <button class="rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50" aria-label="Account">
                                 <PnxPlayerAvatar :name="me.name" :image="me.image" :emblem="me.emblem" :prestige="me.prestige" class="size-8" />

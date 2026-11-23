@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ConfigProvider } from 'reka-ui'
 import { Toaster } from '@/components/ui/sonner'
 
 // vue-sonner's stylesheet is imported in assets/css/main.css.
@@ -25,8 +26,11 @@ const toastTheme = computed(() => (colorMode.value === 'light' ? 'light' : 'dark
 </script>
 
 <template>
-    <NuxtLayout>
-        <NuxtPage />
-    </NuxtLayout>
-    <Toaster rich-colors position="top-center" :theme="toastTheme" />
+    <!-- html sets scrollbar-gutter: stable, so dialogs must not add extra body padding on scroll lock. -->
+    <ConfigProvider :scroll-body="false">
+        <NuxtLayout>
+            <NuxtPage />
+        </NuxtLayout>
+        <Toaster rich-colors position="top-center" :theme="toastTheme" />
+    </ConfigProvider>
 </template>

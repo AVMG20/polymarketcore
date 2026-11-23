@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 const { me } = useMe()
 const { data: gamesData, pending: gamesPending, error: gamesError, refresh: refreshGames } = useGames()
 const { data: profile, pending: profilePending } = usePlayerProfile(() => me.value?.id ?? '')
 const { data: feed, pending: feedPending } = useFeed()
+const { data: gemStats, pending: gemStatsPending, refresh: refreshGemStats } = useGemStats('30d')
+
+watch(() => me.value?.gems, (next, prev) => {
+    if (prev !== undefined && next !== undefined && next !== prev) refreshGemStats()
+})
 
 // The player's own order from the games page ("Mine"); games they never placed follow in hub order.
 const games = computed(() => applyOrder(gamesData.value?.games ?? [], gamesData.value?.order ?? []))
@@ -24,9 +30,17 @@ const feedPreview = computed(() => (feed.value?.events ?? []).slice(0, 6))
         <div class="grid gap-4 lg:grid-cols-2">
             <Card class="gap-5">
                 <CardContent class="space-y-5">
-                    <PnxGemChip :amount="me.gems" :compact="false" size="lg" />
+                    <div class="flex items-center justify-between gap-2">
+                        <PnxGemChip :amount="me.gems" :compact="false" size="lg" />
+                        <NuxtLink to="/gems" class="text-sm font-medium text-primary">History</NuxtLink>
+                    </div>
                     <hr class="border-t">
                     <PnxClaimPile />
+                    <template v-if="gemStats || gemStatsPending">
+                        <hr class="border-t">
+                        <PnxGemBalanceChart v-if="gemStats" :buckets="gemStats.buckets" />
+                        <Skeleton v-else class="h-[148px] rounded-xl" />
+                    </template>
                 </CardContent>
             </Card>
 
