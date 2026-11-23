@@ -87,6 +87,34 @@ export const manifestSchema = z.object({
 
 export type Manifest = z.infer<typeof manifestSchema>
 
+const emptyToNull = (v: string | null | undefined) => (v == null || v.trim() === '' ? null : v)
+
+/** Partial update for an app owner editing one of their games from the hub UI. */
+export const updateOwnedGameSchema = z.object({
+    name: z.string().trim().min(1, 'name must not be empty').max(60, 'name must be at most 60 characters').optional(),
+    tagline: z.string().max(120, 'tagline must be at most 120 characters').nullable()
+        .transform(v => (v && v.trim() !== '' ? v.trim() : null)).optional(),
+    description: z.string().max(10_000, 'description must be at most 10000 characters').nullable()
+        .transform(v => (v && v.trim() !== '' ? v : null)).optional(),
+    playPath: z.string()
+        .max(500, 'playPath must be at most 500 characters')
+        .startsWith('/', 'playPath must start with / (it is appended to the app baseUrl)')
+        .regex(/^[^#\s\\]*$/, 'playPath must not contain #, spaces or backslashes')
+        .optional(),
+    icon: z.preprocess(v => (v === undefined ? undefined : emptyToNull(v as string | null)), imageUrl('icon')).optional(),
+    cover: z.preprocess(v => (v === undefined ? undefined : emptyToNull(v as string | null)), imageUrl('cover')).optional(),
+    accent: z.preprocess(
+        v => (v === undefined ? undefined : emptyToNull(v as string | null)),
+        z.string().regex(/^#[0-9a-fA-F]{6}$/, 'accent must be a hex colour like #e0a100').nullable()
+    ).optional(),
+    visibility: z.enum(['draft', 'public'], { error: "visibility must be 'draft' or 'public'" }).optional()
+}).refine(
+    b => Object.values(b).some(v => v !== undefined),
+    { error: 'Send at least one field to update' }
+)
+
+export type UpdateOwnedGameInput = z.infer<typeof updateOwnedGameSchema>
+
 /**
  * Apply an app's manifest (contract §2 `PUT /manifest`): upsert its games and
  * stars by slug and key, retire whatever the manifest no longer lists, and

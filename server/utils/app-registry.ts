@@ -1,15 +1,15 @@
-import { and, asc, count, eq, gte, inArray, ne } from 'drizzle-orm'
+import { and, asc, count, eq, gte, inArray, ne, sql } from 'drizzle-orm'
 import { createError } from 'h3'
 import { z } from 'zod'
 import { db } from '#server/database/index'
 import { apps, games, gameStars, playerStars, user } from '#server/database/schema'
 import { normalizeAppUrls, type UrlRules } from '#shared/app-urls'
 import { MAX_DEVELOPER_APPS, starBounty } from '#shared/economy'
-import type { AppInfo, DeveloperGame } from '#shared/types/api'
+import type { AppInfo, DeveloperGame, OwnedGame } from '#shared/types/api'
 import { generateApiKey, hashApiKey, type AppRow } from '#server/utils/apps'
 import { coreUrl } from '#server/utils/launch-token'
-import { repoUrlField, SLUG_PATTERN } from '#server/utils/manifest'
-import { gameCounts } from '#server/utils/stars'
+import { repoUrlField, SLUG_PATTERN, type UpdateOwnedGameInput } from '#server/utils/manifest'
+import { gameCounts, verifyApp } from '#server/utils/stars'
 
 /**
  * The app registry, shared by the admin pages and the developer API. Every
@@ -205,6 +205,12 @@ export async function rotateAppKey(appId: string): Promise<{ app: AppRow, apiKey
 
 /** The app's games and stars as the hub sees them (developer API). */
 export async function appGames(appId: string): Promise<DeveloperGame[]> {
+    const owned = await ownedAppGames(appId)
+    return owned.map(({ description: _d, icon: _i, cover: _c, accent: _a, ...rest }) => rest)
+}
+
+/** The app's games with all editable display fields, for the owner's hub UI. */
+export async function ownedAppGames(appId: string): Promise<OwnedGame[]> {
     const rows = await db.select().from(games).where(eq(games.appId, appId)).orderBy(asc(games.position), asc(games.slug))
     if (rows.length === 0) return []
     const slugs = rows.map(r => r.slug)
@@ -223,7 +229,11 @@ export async function appGames(appId: string): Promise<DeveloperGame[]> {
         slug: g.slug,
         name: g.name,
         tagline: g.tagline,
+        description: g.description,
         playPath: g.playPath,
+        icon: g.icon,
+        cover: g.cover,
+        accent: g.accent,
         retired: !!g.retiredAt,
         playUrl: `${coreUrl()}/play/${g.slug}`,
         visibility: g.visibility,
@@ -238,4 +248,36 @@ export async function appGames(appId: string): Promise<DeveloperGame[]> {
             holders: holders(s.game, s.position)
         }))
     }))
+}
+
+/** Update a single non-retired game belonging to an app owned by `userId`. */
+export async function updateOwnedGame(userId: string, appId: string, slug: string, changes: UpdateOwnedGameInput): Promise<OwnedGame> {
+    const app = await getOwnedApp(userId, appId)
+    const [existing] = await db.select().from(games).where(and(eq(games.slug, slug), eq(games.appId, appId)))
+    if (!existing) throw createError({ statusCode: 404, statusMessage: `Game ${slug} not found in app ${appId}` })
+    if (existing.retiredAt) throw createError({ statusCode: 400, statusMessage: `Game ${slug} is retired and cannot be edited` })
+
+    const set: Partial<typeof games.$inferInsert> = {}
+    if (changes.name !== undefined) set.name = changes.name
+    if (changes.tagline !== undefined) set.tagline = changes.tagline
+    if (changes.description !== undefined) set.description = changes.description
+    if (changes.playPath !== undefined) set.playPath = changes.playPath
+    if (changes.icon !== undefined) set.icon = changes.icon
+    if (changes.cover !== undefined) set.cover = changes.cover
+    if (changes.accent !== undefined) set.accent = changes.accent
+    if (changes.visibility !== undefined) set.visibility = changes.visibility
+
+    await db.update(games)
+        .set({ ...set, updatedAt: sql`now()` })
+        .where(and(eq(games.slug, slug), eq(games.appId, appId)))
+
+    // Going from draft to public on an active verified app: pay any pending personal-best bounties once.
+    if (changes.visibility === 'public' && existing.visibility !== 'public' && app.verified && app.status === 'active') {
+        await verifyApp(appId)
+    }
+
+    const all = await ownedAppGames(appId)
+    const updated = all.find(g => g.slug === slug)
+    if (!updated) throw createError({ statusCode: 404, statusMessage: `Game ${slug} not found in app ${appId}` })
+    return updated
 }
