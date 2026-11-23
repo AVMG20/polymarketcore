@@ -2,7 +2,7 @@
 
 You are connecting a game to **Polynux**, a play-money gaming hub at `{{HUB}}`. The hub owns accounts,
 the **gem** wallet and the **star** leaderboard. Your game runs on its own server ("app"), is opened from
-the hub, spends players' gems and tells the hub each player's **star level** (0-10).
+the hub, spends players' gems and optionally reports each player's **star level** (0-10).
 
 - This guide: `{{HUB}}/developers.md` · OpenAPI 3.1: `{{HUB}}/api/v1/openapi.json` · Index: `{{HUB}}/llms.txt`
 - Reference implementation (copy it): `{{HUB}}/developers/hello-game/server.ts` and `{{HUB}}/developers/hello-game/index.html`
@@ -13,8 +13,11 @@ the hub, spends players' gems and tells the hub each player's **star level** (0-
 - You MUST keep the game fully playable with zero gems. Gems speed up, convert or decorate.
 - You MUST decide every outcome, payout, roll and star level on your server (CSPRNG for randomness). The
   client only asks; it MUST NOT send results.
-- Stars are your game's current verdict on the player, a level from 0 to 10, set by your server. You decide
-  whether levels can drop. You MUST NOT sell star levels directly for gems.
+- **Stars are optional** (0 to 10 levels per game — it's up to the human to decide). You do not have to declare
+  10 stars: bigger games usually have up to 10, while smaller games have fewer (e.g. 1–5) or none (`"stars": []`).
+  Ask the human how many star levels they want if they didn't specify.
+- When a game declares stars, they are your game's current verdict on the player (`0` to your declared count),
+  set by your server. You decide whether levels can drop. You MUST NOT sell star levels directly for gems.
 - You MUST verify every launch token (signature, `iss`, `aud`, `exp`) and accept each `jti` once.
 - You MUST NOT put the app API key (`pnx_…`) or the developer token (`pnxd_…`) in client code, URLs or logs.
 - Every spend MUST carry an idempotency key, created once per purchase and reused on retries.
@@ -39,6 +42,7 @@ export KEY=pnx_…
 
 # 2. Declare the game and its star levels (your server does this on every boot).
 #    repoUrl (optional) is where your code lives; players see it on your game page.
+#    stars is optional (0 to 10): bigger games usually have more, smaller games fewer or [].
 curl -s -X PUT $HUB/api/v1/manifest -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{
   "repoUrl": "https://github.com/me/my-game",
   "games": [{
@@ -239,8 +243,8 @@ your code (`https://github.com/me/my-game`), shown with your name on your game p
 - **Game**: `slug` (`[a-z0-9-]{2,40}`, globally unique, first app to claim it owns it; `admin`, `daily`
   and `welcome` are reserved), `name`, `tagline?`, `description?` (Markdown), `playPath` (starts with `/`,
   no `#`), `icon?` (https image or `lucide:name`), `cover?` (https image), `accent?` (`#rrggbb`),
-  `visibility?` (`draft`|`public`; default `draft` for unverified apps, `public` for verified ones), `stars`
-  (0-10 `{ key, name, description? }`; entry n names level n, the count is the game's max level). Games or stars missing from a later manifest are retired, never deleted.
+  `visibility?` (`draft`|`public`; default `draft` for unverified apps, `public` for verified ones), `stars?`
+  (0-10 `{ key, name, description? }`, optional — up to the human: bigger games usually have up to 10, smaller games fewer or `[]`; entry n names level n and the count is the game's max level). Games or stars missing from a later manifest are retired, never deleted.
 - **manifest `repoUrl`**: optional, the same field as on the app. Omitted leaves the app's repo URL as it is; `null` clears it.
 - **spend**: `amount` 1-100000 integer; `idempotencyKey` 8-100 chars. Same key + same params replays the
   original result without charging; different params → 409. Not enough gems → 400 `Not enough gems`.
