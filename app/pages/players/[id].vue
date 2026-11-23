@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
+definePageMeta({ middleware: 'auth' })
+
 const route = useRoute()
 const id = computed(() => String(route.params.id))
 const { data, pending, error, refresh } = usePlayerProfile(id)

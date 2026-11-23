@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import type { LeaderboardEntry } from '#shared/types/api'
 
+definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Leaderboard · Polynux' })
 
 const PAGE = 25

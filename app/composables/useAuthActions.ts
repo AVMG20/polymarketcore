@@ -51,6 +51,7 @@ export function useAuthActions() {
     async function signOut() {
         await authClient.signOut()
         clear()
+        clearNuxtData()
         await navigateTo('/login')
     }
 

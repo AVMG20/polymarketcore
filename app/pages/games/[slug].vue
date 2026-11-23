@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
+definePageMeta({ middleware: 'auth' })
+
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const { data, pending, error, refresh } = useGame(slug)

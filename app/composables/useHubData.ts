@@ -3,7 +3,8 @@ import type {
     GameDetailResponse,
     GamesResponse,
     LeaderboardResponse,
-    PlayerProfileResponse
+    PlayerProfileResponse,
+    ShowcaseResponse
 } from '#shared/types/api'
 
 /*
@@ -11,6 +12,9 @@ import type {
  * pages stay declarative and share cache keys. Each returns the usual
  * `{ data, pending, error, refresh }`.
  */
+
+export const useShowcaseGames = () =>
+    useAsyncData('pnx-showcase', () => apiFetch<ShowcaseResponse>('/api/showcase'))
 
 export const useGames = () =>
     useAsyncData('pnx-games', () => apiFetch<GamesResponse>('/api/games'))

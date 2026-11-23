@@ -33,7 +33,7 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
             <NuxtLink to="/" class="flex items-center gap-1.5 font-display text-xl font-extrabold tracking-tight">
                 <PnxLogo class="size-7" />Polynux
             </NuxtLink>
-            <nav class="ml-2 hidden items-center gap-1 text-sm md:flex" aria-label="Main">
+            <nav v-if="me" class="ml-2 hidden items-center gap-1 text-sm md:flex" aria-label="Main">
                 <Button
                     v-for="l in links"
                     :key="l.to"
@@ -45,7 +45,7 @@ const active = (to: string) => route.path === to || route.path.startsWith(`${to}
                 </Button>
             </nav>
             <div class="ml-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
-                <PnxSearch />
+                <PnxSearch v-if="me" />
                 <Button variant="ghost" size="icon" :class="me ? 'hidden md:inline-flex' : ''" aria-label="Toggle theme" @click="toggleTheme">
                     <ClientOnly>
                         <Sun v-if="isDark" class="size-4" />

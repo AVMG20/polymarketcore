@@ -4,6 +4,7 @@ import { Newspaper, TriangleAlert } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 
+definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Feed · Polynux' })
 
 const { events, pending, error, loadingMore, moreError, done, more, reload } = useFeedStream()

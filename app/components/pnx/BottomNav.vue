@@ -2,6 +2,7 @@
 import { Gamepad2, Home, Newspaper, Trophy } from 'lucide-vue-next'
 
 /** Phone navigation: thumb-reachable tabs, hidden from md up (the header has the links there). */
+const { loggedIn } = useMe()
 const route = useRoute()
 const tabs = [
     { to: '/', label: 'Home', icon: Home },
@@ -13,7 +14,7 @@ const active = (to: string) => (to === '/' ? route.path === '/' : route.path ===
 </script>
 
 <template>
-    <nav class="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
+    <nav v-if="loggedIn" class="fixed inset-x-0 bottom-0 z-40 border-t bg-background/90 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden" aria-label="Main">
         <ul class="mx-auto grid max-w-md grid-cols-4">
             <li v-for="t in tabs" :key="t.to">
                 <NuxtLink

@@ -4,6 +4,7 @@ import type { Component } from 'vue'
 import { Button } from '@/components/ui/button'
 import type { GameSort } from '@/composables/useGameSort'
 
+definePageMeta({ middleware: 'auth' })
 useHead({ title: 'Games · Polynux' })
 
 const { data, pending, error, refresh } = useGames()

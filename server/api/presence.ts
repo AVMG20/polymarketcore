@@ -2,9 +2,8 @@ import { auth } from '#server/utils/auth'
 import { presenceClose, presenceMessage, presenceOpen } from '#server/utils/presence'
 
 /**
- * Live player counts: /api/presence (WebSocket). Everyone receives
- * `{ counts: { [slug]: players } }`; a signed-in /play page also reports the
- * game it shows.
+ * Live player counts: /api/presence (WebSocket). Signed-in players receive
+ * `{ counts: { [slug]: players } }`; a /play page also reports the game it shows.
  */
 export default defineWebSocketHandler({
     async upgrade(request) {
@@ -13,10 +12,16 @@ export default defineWebSocketHandler({
     },
 
     open(peer) {
-        presenceOpen(peer, (peer.context as { userId?: string | null }).userId ?? null)
+        const userId = (peer.context as { userId?: string | null }).userId ?? null
+        if (!userId) {
+            peer.close(4401, 'Unauthorized')
+            return
+        }
+        presenceOpen(peer, userId)
     },
 
     message(peer, message) {
+        if (!(peer.context as { userId?: string | null }).userId) return
         presenceMessage(peer, message.text())
     },
 

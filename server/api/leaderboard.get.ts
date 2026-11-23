@@ -1,6 +1,6 @@
 import { defineEventHandler } from 'h3'
 import { z } from 'zod'
-import { getSessionUserId } from '#server/utils/auth'
+import { requireUser } from '#server/utils/auth'
 import { getLeaderboard } from '#server/utils/hub'
 import { parseQuery } from '#server/utils/validate'
 import type { LeaderboardResponse } from '#shared/types/api'
@@ -11,7 +11,7 @@ const querySchema = z.object({
 })
 
 export default defineEventHandler(async (event): Promise<LeaderboardResponse> => {
+    const u = await requireUser(event)
     const { limit, offset } = parseQuery(event, querySchema)
-    const viewerId = await getSessionUserId(event)
-    return getLeaderboard(viewerId, limit, offset)
+    return getLeaderboard(u.id, limit, offset)
 })

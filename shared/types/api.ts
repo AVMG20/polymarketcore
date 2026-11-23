@@ -170,6 +170,21 @@ export interface GamesResponse {
     order: string[] | null
 }
 
+/** Public landing-page game card: display fields only, no usernames or stats. */
+export interface ShowcaseGame {
+    slug: string
+    name: string
+    tagline: string | null
+    icon: string | null
+    cover: string | null
+    accent: string | null
+}
+
+/** `GET /api/showcase`: public, verified games for the signed-out landing page. */
+export interface ShowcaseResponse {
+    games: ShowcaseGame[]
+}
+
 /** `PUT /api/me/game-order` `{ order: [slug, …] }` (`[]` clears it): the saved order. */
 export interface GameOrderResponse {
     order: string[]

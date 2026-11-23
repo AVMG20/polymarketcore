@@ -161,6 +161,12 @@ export async function requireAdmin(event: H3Event): Promise<SessionUser> {
     return u
 }
 
+/** The signed-in viewer (id + admin), or 401. */
+export async function requireViewer(event: H3Event): Promise<{ id: string, admin: boolean }> {
+    const u = await requireUser(event)
+    return { id: u.id, admin: isAdmin(u) }
+}
+
 /** The signed-in viewer (id + admin) for public endpoints that personalise, or null. */
 export async function getViewer(event: H3Event): Promise<{ id: string, admin: boolean } | null> {
     const session = await auth.api.getSession({ headers: event.headers })

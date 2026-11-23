@@ -12,6 +12,7 @@ import type {
     LeaderboardResponse,
     PlayerProfileResponse,
     SearchPlayer,
+    ShowcaseGame,
     StarTrack
 } from '#shared/types/api'
 import { isEnvAdmin } from '#server/utils/admins'
@@ -46,6 +47,30 @@ export function gameListedTo(viewer: Viewer | null): SQL | undefined {
     if (viewer?.admin) return undefined
     const listed = and(eq(games.visibility, 'public'), eq(apps.verified, true))
     return viewer ? or(listed, eq(apps.ownerUserId, viewer.id)) : listed
+}
+
+/**
+ * Public verified games for the signed-out landing page: display fields only,
+ * no owners, player counts, activity stats or star levels.
+ */
+export async function listShowcaseGames(): Promise<ShowcaseGame[]> {
+    return db.select({
+        slug: games.slug,
+        name: games.name,
+        tagline: games.tagline,
+        icon: games.icon,
+        cover: games.cover,
+        accent: games.accent
+    })
+        .from(games)
+        .innerJoin(apps, eq(apps.id, games.appId))
+        .where(and(
+            isNull(games.retiredAt),
+            eq(apps.status, 'active'),
+            eq(games.visibility, 'public'),
+            eq(apps.verified, true)
+        ))
+        .orderBy(asc(games.position), desc(games.createdAt), asc(games.name))
 }
 
 /**

@@ -54,8 +54,23 @@ function release() {
 
 export function usePresence() {
     if (import.meta.client) {
-        onMounted(acquire)
-        onBeforeUnmount(release)
+        const { loggedIn } = useMe()
+        let held = false
+        const sync = (on: boolean) => {
+            if (on && !held) {
+                held = true
+                acquire()
+            } else if (!on && held) {
+                held = false
+                release()
+            }
+        }
+        onMounted(() => sync(loggedIn.value))
+        watch(loggedIn, (on) => {
+            sync(on)
+            if (!on) counts.value = {}
+        })
+        onBeforeUnmount(() => sync(false))
     }
     return { counts: readonly(counts) }
 }
