@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gamepad2, GripVertical } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Gamepad2, GripVertical, Shield } from 'lucide-vue-next'
 import { Skeleton } from '@/components/ui/skeleton'
+import { groupGameSections } from '#shared/game-sections'
 import type { GameSummary } from '#shared/types/api'
 
 /**
- * Games, sectioned: verified ("Games"), "New" (unverified: playable, stars
- * don't count yet) and the viewer's drafts, each in the incoming order.
+ * Games, sectioned: verified ("Games"), unverified ("New" for yours,
+ * "Unverified" for others an admin sees), and drafts ("Your drafts" vs
+ * "Other drafts" for admins), each in the incoming order.
  * `untitledFirst` drops the "Games" heading when that section comes first.
  * `editing`: cards move by drag (pointer events, so touch works: from the grip
  * on touch, anywhere with a mouse) or with the arrow buttons and keys. Every
@@ -16,12 +19,9 @@ import type { GameSummary } from '#shared/types/api'
  */
 const props = defineProps<{ games: GameSummary[], pending?: boolean, error?: boolean, untitledFirst?: boolean, editing?: boolean, limit?: number, moreTo?: string }>()
 const emit = defineEmits<{ retry: [], move: [slug: string, to: string] }>()
+const { me } = useMe()
 
-const allSections = computed(() => [
-    { key: 'games', title: 'Games', note: '', games: props.games.filter(g => g.visibility === 'public' && g.app.verified) },
-    { key: 'new', title: 'New', note: "Stars don't count yet", games: props.games.filter(g => g.visibility === 'public' && !g.app.verified) },
-    { key: 'drafts', title: 'Your drafts', note: 'Only you', games: props.games.filter(g => g.visibility === 'draft') }
-].filter(s => s.games.length > 0))
+const allSections = computed(() => groupGameSections(props.games, me.value?.id ?? null))
 
 const sections = computed(() => {
     let left = props.limit ?? Number.POSITIVE_INFINITY
@@ -189,8 +189,11 @@ onBeforeUnmount(stopDrag)
             <Button variant="outline" as-child><NuxtLink to="/developers">Make one</NuxtLink></Button>
         </PnxStateBlock>
         <section v-for="(section, si) in sections" :key="section.key" class="space-y-3" :aria-label="section.title">
-            <div v-if="!(untitledFirst && si === 0 && section.key === 'games')" class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <div v-if="!(untitledFirst && si === 0 && section.key === 'games')" class="flex flex-wrap items-center gap-x-2.5 gap-y-1">
                 <h2 class="text-xl">{{ section.title }}</h2>
+                <Badge v-if="section.adminOnly" variant="outline" class="gap-1">
+                    <Shield class="size-3" aria-hidden="true" />Admin
+                </Badge>
                 <p v-if="section.note" class="text-sm text-muted-foreground">{{ section.note }}</p>
                 <NuxtLink v-if="si === 0 && truncated && moreTo" :to="moreTo" class="ml-auto text-sm font-medium text-primary">See all</NuxtLink>
             </div>

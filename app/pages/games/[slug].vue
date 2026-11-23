@@ -10,9 +10,25 @@ definePageMeta({ middleware: 'auth' })
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
 const { data, pending, error, refresh } = useGame(slug)
-const { loggedIn } = useMe()
+const { me, loggedIn } = useMe()
 
 const game = computed(() => data.value?.game ?? null)
+const isOwn = computed(() => !!me.value && game.value?.app.owner?.id === me.value.id)
+const visibilityNotice = computed(() => {
+    const g = game.value
+    if (!g) return null
+    if (g.visibility === 'draft') {
+        if (isOwn.value) return 'Draft: only visible to you and admins'
+        const maker = g.app.owner?.name
+        return maker ? `Draft by ${maker}: only visible to them and admins` : 'Draft: only visible to the maker and admins'
+    }
+    if (!g.counts) {
+        return isOwn.value
+            ? 'Unverified: only visible to you and admins — no star count, no bounties'
+            : 'Unverified: only visible to the maker and admins — no star count, no bounties'
+    }
+    return null
+})
 const accent = computed(() => (game.value ? gameAccent(game.value) : 'var(--primary)'))
 const notFound = computed(() => apiErrorStatus(error.value) === 404)
 const description = computed(() => renderMarkdown(game.value?.description))
@@ -72,9 +88,9 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                 </div>
             </section>
 
-            <p v-if="!game.counts && game.visibility === 'public'" class="flex items-center gap-2 rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+            <p v-if="visibilityNotice" class="flex items-center gap-2 rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
                 <TriangleAlert class="size-4 shrink-0" aria-hidden="true" />
-                Unverified: no star count, no bounties
+                {{ visibilityNotice }}
             </p>
 
             <div class="grid gap-6 lg:grid-cols-3">
