@@ -9,6 +9,7 @@ import type {
     GameDetailResponse,
     GameSummary,
     LeaderboardEntry,
+    LeaderboardMadeGame,
     LeaderboardResponse,
     PlayerProfileResponse,
     SearchPlayer,
@@ -212,8 +213,8 @@ const totalsCte = () => sql`
 
 /**
  * Every player, ranked by the sum of their current levels in counted games
- * (see `ranked`). Two queries: the page (plus the viewer's own row) and the
- * per-game levels for those players.
+ * (see `ranked`). Fixed queries: the page (plus the viewer's own row), then
+ * the per-game levels and owned counted games for those players in parallel.
  */
 export async function getLeaderboard(viewerId: string | null, limit = 100, offset = 0): Promise<LeaderboardResponse> {
     const result = await db.execute<RankedRow & Record<string, unknown>>(sql`
@@ -226,30 +227,61 @@ export async function getLeaderboard(viewerId: string | null, limit = 100, offse
     `)
     const rows = result.rows
     const ids = rows.map(r => r.id)
-    const perGame = ids.length
-        ? await db.select({ userId: playerStars.userId, game: playerStars.game, stars: playerStars.stars })
-            .from(playerStars)
-            .innerJoin(games, eq(games.slug, playerStars.game))
-            .innerJoin(apps, eq(apps.id, games.appId))
-            .where(and(inArray(playerStars.userId, ids), gte(playerStars.stars, 1), countedGame()))
-        : []
+    const [perGame, madeRows] = ids.length
+        ? await Promise.all([
+            db.select({ userId: playerStars.userId, game: playerStars.game, stars: playerStars.stars })
+                .from(playerStars)
+                .innerJoin(games, eq(games.slug, playerStars.game))
+                .innerJoin(apps, eq(apps.id, games.appId))
+                .where(and(inArray(playerStars.userId, ids), gte(playerStars.stars, 1), countedGame())),
+            db.select({
+                ownerId: apps.ownerUserId,
+                slug: games.slug,
+                name: games.name,
+                icon: games.icon,
+                accent: games.accent
+            })
+                .from(games)
+                .innerJoin(apps, eq(apps.id, games.appId))
+                .where(and(inArray(apps.ownerUserId, ids), countedGame()))
+                .orderBy(asc(games.position), asc(games.name))
+        ])
+        : [[], []]
 
-    const toEntry = (r: RankedRow): LeaderboardEntry => {
-        const gamesMap: Record<string, number> = {}
-        for (const g of perGame) if (g.userId === r.id) gamesMap[g.game] = g.stars
-        return {
-            rank: r.rank,
-            id: r.id,
-            name: r.name,
-            image: r.image,
-            emblem: r.emblem,
-            prestige: r.prestige,
-            stars: r.stars,
-            title: titleFor(r.stars),
-            heldSince: iso(r.held_since)!,
-            games: gamesMap
+    const starsByUser = new Map<string, Record<string, number>>()
+    for (const g of perGame) {
+        let map = starsByUser.get(g.userId)
+        if (!map) {
+            map = {}
+            starsByUser.set(g.userId, map)
         }
+        map[g.game] = g.stars
     }
+
+    const madeByUser = new Map<string, LeaderboardMadeGame[]>()
+    for (const g of madeRows) {
+        if (!g.ownerId) continue
+        let list = madeByUser.get(g.ownerId)
+        if (!list) {
+            list = []
+            madeByUser.set(g.ownerId, list)
+        }
+        list.push({ slug: g.slug, name: g.name, icon: g.icon, accent: g.accent })
+    }
+
+    const toEntry = (r: RankedRow): LeaderboardEntry => ({
+        rank: r.rank,
+        id: r.id,
+        name: r.name,
+        image: r.image,
+        emblem: r.emblem,
+        prestige: r.prestige,
+        stars: r.stars,
+        title: titleFor(r.stars),
+        heldSince: iso(r.held_since)!,
+        games: starsByUser.get(r.id) ?? {},
+        madeGames: madeByUser.get(r.id) ?? []
+    })
 
     const inPage = rows.filter(r => r.rank > offset && r.rank <= offset + limit)
     const mine = viewerId ? rows.find(r => r.id === viewerId) : undefined

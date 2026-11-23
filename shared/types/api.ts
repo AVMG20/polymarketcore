@@ -226,6 +226,13 @@ export interface GameActivity {
     totals: { opens: number, players: number, seconds: number, avgSessionSeconds: number, peak: number }
 }
 
+export interface LeaderboardMadeGame {
+    slug: string
+    name: string
+    icon: string | null
+    accent: string | null
+}
+
 export interface LeaderboardEntry extends PlayerRef {
     rank: number
     /** Sum of current levels in counted games. */
@@ -235,6 +242,8 @@ export interface LeaderboardEntry extends PlayerRef {
     heldSince: string
     /** Current level per counted game slug. */
     games: Record<string, number>
+    /** Public, verified, active games of apps this player owns. */
+    madeGames: LeaderboardMadeGame[]
 }
 
 export interface SearchPlayer extends PlayerRef {
@@ -337,6 +346,20 @@ export interface LaunchResponse {
 /** `GET /api/me/apps`: the apps the signed-in player registered. */
 export interface MyAppsResponse {
     apps: AppInfo[]
+}
+
+/** A game of an app the signed-in player owns, with all editable display fields. */
+export interface OwnedGame extends DeveloperGame {
+    description: string | null
+    icon: string | null
+    cover: string | null
+    accent: string | null
+}
+
+/** `GET /api/me/apps/:id`: one of the signed-in player's apps and all its games. */
+export interface MyAppDetailResponse {
+    app: AppInfo
+    games: OwnedGame[]
 }
 
 /** A registered app as its owner and admins see it. */
