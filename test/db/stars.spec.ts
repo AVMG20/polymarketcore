@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 import { db } from '#server/database/index'
-import { activityEvents, apps } from '#server/database/schema'
+import { activityEvents, apps, playerStars } from '#server/database/schema'
 import { countStars, setStars, verifyApp } from '#server/utils/stars'
 import { bountyForLevels } from '#shared/economy'
 import { burst, createAppWithGame, createConnectedPlayer, createPlayer, gemsOf, ledgerSum } from './helpers'
@@ -38,6 +38,19 @@ describe('star levels', () => {
         expect(await setStars({ appId, playerId: player, game, stars: 4, seq: 4 })).toMatchObject({ bounty: bountyForLevels(3, 4) })
         expect(await gemsOf(player)).toBe(bountyForLevels(0, 4))
         expect(await ledgerSum(player)).toBe(bountyForLevels(0, 4))
+    })
+
+    it('a best reset below the paid level never pays those levels again', async () => {
+        const { appId, game } = await createAppWithGame(10)
+        const player = await createConnectedPlayer(appId)
+        await setStars({ appId, playerId: player, game, stars: 5, seq: 1 })
+        await setStars({ appId, playerId: player, game, stars: 2, seq: 2 })
+        // What migration 0010 does for the casino: the old best follows the current level, paid_best stays.
+        await db.update(playerStars).set({ bestStars: 2 }).where(and(eq(playerStars.userId, player), eq(playerStars.game, game)))
+        expect(await setStars({ appId, playerId: player, game, stars: 5, seq: 3 })).toMatchObject({ bounty: 0, stars: 5, best: 5 })
+        expect(await setStars({ appId, playerId: player, game, stars: 7, seq: 4 })).toMatchObject({ bounty: bountyForLevels(5, 7), best: 7 })
+        expect(await gemsOf(player)).toBe(bountyForLevels(0, 7))
+        expect(await ledgerSum(player)).toBe(bountyForLevels(0, 7))
     })
 
     it('parallel sets reaching a new best pay once', async () => {

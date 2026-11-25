@@ -83,7 +83,7 @@ and scripts.
   player's own gems (a refunded spend) passes `{ refund: true }`. Spends, refunds and bounties carry `appId`.
 - **Stars are levels** (0-10 per player and game, `player_stars`): the game's current verdict, which can go
   down. A set applies only with a higher `seq`. Bounties pay once per level, only for new personal bests
-  (`paid_best` trails `best_stars`), and only in games that count.
+  (`paid_best` trails `best_stars`; it may sit above it where a game's old bests were reset, see migration 0010), and only in games that count.
 - **What counts** (`countedGame()` in `stars.ts`): public, not retired, active and verified app. Totals,
   titles and the leaderboard use current levels in those games only. Manifests retire, never delete.
 - **Untrusted apps**: unverified apps pay no bounties (paid at verification, once), their stars don't

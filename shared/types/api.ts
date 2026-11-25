@@ -151,8 +151,8 @@ export interface GameSummary {
     stars: StarLevel[]
     /** Number of levels (declared stars). */
     maxStars: number
-    /** The viewer's level and best here, null when signed out or never played. */
-    me: { stars: number, best: number } | null
+    /** The viewer's level, best and the level up to which bounties were paid here, null when signed out or never played. */
+    me: { stars: number, best: number, paid: number } | null
     /** When the game was first registered. */
     createdAt: string
     /** Players holding at least one star here right now. */

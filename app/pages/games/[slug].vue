@@ -37,6 +37,8 @@ const cover = ref<HTMLImageElement | null>(null)
 // An image that failed before hydration never fires @error: check it once mounted.
 onMounted(() => { if (cover.value?.complete && cover.value.naturalWidth === 0) coverBroken.value = true })
 const best = computed(() => game.value?.me?.best ?? 0)
+/** Levels whose bounty is already paid (can be above `best` after a game reset its old bests). */
+const paid = computed(() => Math.max(best.value, game.value?.me?.paid ?? 0))
 const current = computed(() => game.value?.me?.stars ?? 0)
 const { counts } = usePresence()
 const live = computed(() => counts.value[slug.value] ?? 0)
@@ -126,8 +128,8 @@ useHead({ title: () => `${game.value?.name ?? 'Game'} · Polynux` })
                                 </div>
                                 <div class="flex shrink-0 flex-col items-end gap-1">
                                     <span v-if="level.bounty > 0 && game.app.verified" class="flex items-center gap-1.5 text-xs text-muted-foreground" :title="`First time you reach this level: +${level.bounty} gems`">
-                                        {{ level.position <= best ? 'Earned' : 'Reward' }}
-                                        <PnxGemChip :amount="level.bounty" size="sm" :class="level.position <= best ? 'opacity-50' : ''" />
+                                        {{ level.position <= paid ? 'Earned' : 'Reward' }}
+                                        <PnxGemChip :amount="level.bounty" size="sm" :class="level.position <= paid ? 'opacity-50' : ''" />
                                     </span>
                                     <span class="tabular text-xs text-muted-foreground">{{ level.holders }} {{ level.holders === 1 ? 'player' : 'players' }}</span>
                                 </div>

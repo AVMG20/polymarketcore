@@ -170,7 +170,9 @@ export const gameStars = pgTable('game_stars', {
  * A player's star level in one game (0-10): the game's current verdict, which
  * can go down. `seq` orders the app's sets (only a higher seq applies);
  * `best_stars` is the highest level ever reached; `paid_best` is the level up
- * to which bounties were paid (it trails `best_stars` while the app is unverified).
+ * to which bounties were paid (it trails `best_stars` while the app is unverified,
+ * and can sit above it after a game redefined its levels and its old bests were reset:
+ * those levels never pay again).
  */
 export const playerStars = pgTable('player_stars', {
     userId: text('user_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
@@ -185,7 +187,7 @@ export const playerStars = pgTable('player_stars', {
     primaryKey({ columns: [table.userId, table.game] }),
     index('player_stars_game_idx').on(table.game),
     index('player_stars_unpaid_idx').on(table.game).where(sql`${table.paidBest} < ${table.bestStars}`),
-    check('player_stars_range', sql`${table.stars} between 0 and 10 and ${table.bestStars} between 0 and 10 and ${table.paidBest} between 0 and ${table.bestStars}`)
+    check('player_stars_range', sql`${table.stars} between 0 and 10 and ${table.bestStars} between 0 and 10 and ${table.paidBest} between 0 and 10`)
 ])
 
 /** The gem ledger. Every change to `user.gems` writes exactly one row. */

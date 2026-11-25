@@ -150,7 +150,7 @@ export async function listGames(viewer: Viewer | null, filter: { slug?: string, 
             },
             stars: defs,
             maxStars: defs.length,
-            me: m ? { stars: m.stars, best: m.bestStars } : null
+            me: m ? { stars: m.stars, best: m.bestStars, paid: m.paidBest } : null
         }
     })
 }
