@@ -1,9 +1,38 @@
+import { createHash } from 'node:crypto'
 import { and, desc, eq, notInArray } from 'drizzle-orm'
 import { createError } from 'h3'
 import { db } from '#server/database/index'
 import { emblemHistory, user } from '#server/database/schema'
-import { EMBLEM_HISTORY_LIMIT, serializeEmblem } from '#shared/emblem'
+import { coreUrl } from '#server/utils/launch-token'
+import { EMBLEM_HISTORY_LIMIT, parseEmblem, renderEmblemSvg, serializeEmblem } from '#shared/emblem'
 import type { EmblemHistoryEntry, SaveEmblemResponse } from '#shared/types/api'
+
+/** Short content hash used for cache-busting and ETag on `/emblems/:id.svg`. */
+export function emblemVersion(emblem: string): string {
+    return createHash('sha256').update(emblem).digest('hex').slice(0, 12)
+}
+
+/**
+ * The player's avatar URL for external apps (launch token, `/api/v1/players/:id`):
+ * their rendered emblem SVG when set, falling back to `user.image`.
+ */
+export function playerAvatarUrl(player: { id: string, image: string | null, emblem: string | null }, baseUrl?: string): string | null {
+    if (player.emblem && parseEmblem(player.emblem)) {
+        const origin = (baseUrl ?? coreUrl()).replace(/\/+$/, '')
+        return `${origin}/emblems/${encodeURIComponent(player.id)}.svg?v=${emblemVersion(player.emblem)}`
+    }
+    return player.image ?? null
+}
+
+/** Look up a player's emblem and render it to SVG, or null when missing/invalid. */
+export async function getPlayerEmblemSvg(userId: string): Promise<{ svg: string, version: string } | null> {
+    if (!userId) return null
+    const [row] = await db.select({ emblem: user.emblem }).from(user).where(eq(user.id, userId))
+    if (!row?.emblem) return null
+    const svg = renderEmblemSvg(row.emblem)
+    if (!svg) return null
+    return { svg, version: emblemVersion(row.emblem) }
+}
 
 /**
  * Set the player's emblem, or clear it with `null` (the avatar falls back to

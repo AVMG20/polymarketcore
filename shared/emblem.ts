@@ -138,3 +138,25 @@ export function emblemStarPoints(element: Pick<EmblemPlacedShape, 'rotation' | '
 export function emblemStrokePath(points: EmblemPoint[]): string {
     return points.map((point, index) => `${index ? 'L' : 'M'} ${point[0]} ${point[1]}`).join(' ')
 }
+
+/** Render a valid emblem as a standalone 100x100 SVG document (matching PnxEmblemSvg). */
+export function renderEmblemSvg(value: unknown): string | null {
+    const data = parseEmblem(value)
+    if (!data) return null
+    const body = data.elements.map((element) => {
+        if (element.kind === 'stroke') {
+            return `<path d="${emblemStrokePath(element.points)}" stroke="${element.color}" stroke-width="${element.width}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`
+        }
+        if (element.shape === 'circle') {
+            return `<circle cx="${element.x}" cy="${element.y}" r="${element.size / 2}" fill="${element.color}"/>`
+        }
+        if (element.shape === 'square') {
+            return `<rect x="${element.x - element.size / 2}" y="${element.y - element.size / 2}" width="${element.size}" height="${element.size}" transform="rotate(${element.rotation} ${element.x} ${element.y})" fill="${element.color}" rx="2"/>`
+        }
+        if (element.shape === 'star') {
+            return `<polygon points="${emblemStarPoints(element)}" fill="${element.color}"/>`
+        }
+        return `<polygon points="${emblemPolygonPoints(element)}" fill="${element.color}"/>`
+    }).join('')
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" preserveAspectRatio="xMidYMid slice"><rect fill="${data.background}" width="100" height="100"/>${body}</svg>`
+}

@@ -1,11 +1,13 @@
 import { eq } from 'drizzle-orm'
+import { decodeJwt } from 'jose'
 import { describe, expect, it } from 'vitest'
 import { db } from '#server/database/index'
 import { emblemHistory, user } from '#server/database/schema'
-import { listEmblemHistory, saveEmblem } from '#server/utils/emblem'
+import { emblemVersion, getPlayerEmblemSvg, listEmblemHistory, playerAvatarUrl, saveEmblem } from '#server/utils/emblem'
 import { getFeed, getPlayerProfile } from '#server/utils/hub'
+import { launchTokenFor } from '#server/utils/launch'
 import { EMBLEM_HISTORY_LIMIT, emptyEmblem, type EmblemData } from '#shared/emblem'
-import { burst, createPlayer } from './helpers'
+import { burst, createAppWithGame, createPlayer } from './helpers'
 
 /** A distinct valid emblem per `n`. */
 const drawing = (n: number): EmblemData => ({
@@ -96,5 +98,39 @@ describe('emblems', () => {
             expect(event.player).toHaveProperty('emblem')
             expect(typeof event.player.prestige).toBe('number')
         }
+    })
+
+    it('renders the emblem as SVG and exposes its URL on launch tokens ahead of user.image', async () => {
+        const id = await createPlayer()
+        const { appId } = await createAppWithGame()
+        await db.update(user).set({ image: 'https://cdn.example/fallback.png' }).where(eq(user.id, id))
+
+        // Before an emblem is saved, launch tokens carry user.image and no SVG exists.
+        expect(await getPlayerEmblemSvg(id)).toBeNull()
+        const before = decodeJwt(await launchTokenFor(id, appId))
+        expect(before.image).toBe('https://cdn.example/fallback.png')
+
+        // Saving an emblem switches the avatar URL to the versioned SVG endpoint.
+        const first = await saveEmblem(id, drawing(7))
+        const rendered = await getPlayerEmblemSvg(id)
+        expect(rendered).not.toBeNull()
+        expect(rendered!.version).toBe(emblemVersion(first.emblem!))
+        expect(rendered!.svg).toContain('<svg xmlns="http://www.w3.org/2000/svg"')
+
+        const withEmblem = decodeJwt(await launchTokenFor(id, appId))
+        expect(withEmblem.image).toBe(playerAvatarUrl({ id, image: 'https://cdn.example/fallback.png', emblem: first.emblem }))
+        expect(withEmblem.image).toMatch(new RegExp(`/emblems/${id}\\.svg\\?v=${rendered!.version}$`))
+
+        // Updating the emblem bumps the cache-busting query param.
+        const second = await saveEmblem(id, drawing(8))
+        const updated = decodeJwt(await launchTokenFor(id, appId))
+        expect(updated.image).not.toBe(withEmblem.image)
+        expect(updated.image).toContain(`?v=${emblemVersion(second.emblem!)}`)
+
+        // Clearing the emblem falls back to user.image again.
+        await saveEmblem(id, null)
+        expect(await getPlayerEmblemSvg(id)).toBeNull()
+        const cleared = decodeJwt(await launchTokenFor(id, appId))
+        expect(cleared.image).toBe('https://cdn.example/fallback.png')
     })
 })

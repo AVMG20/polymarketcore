@@ -5,6 +5,7 @@ import {
     EMBLEM_MAX_SERIALIZED_LENGTH,
     emptyEmblem,
     parseEmblem,
+    renderEmblemSvg,
     serializeEmblem,
     type EmblemData
 } from '#shared/emblem'
@@ -58,6 +59,26 @@ describe('emblem validation', () => {
         expect(JSON.stringify(data).length).toBeGreaterThan(EMBLEM_MAX_SERIALIZED_LENGTH)
         expect(serializeEmblem(data)).toBeNull()
         expect(parseEmblem(JSON.stringify(data))).toBeNull()
+    })
+
+    it('renders valid emblems to standalone SVG and refuses invalid ones', () => {
+        const data = emblem([
+            stroke(),
+            shape({ shape: 'circle' }),
+            shape({ shape: 'square', rotation: 45 }),
+            shape({ shape: 'star' }),
+            shape({ shape: 'triangle' })
+        ])
+        const svg = renderEmblemSvg(JSON.stringify(data))
+        expect(svg).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 100 100" width="100" height="100"/)
+        expect(svg).toContain('<rect fill="#312e81" width="100" height="100"/>')
+        expect(svg).toContain('<path d="M 10 10 L 20 30"')
+        expect(svg).toContain('<circle cx="50" cy="50" r="15" fill="#ff0000"/>')
+        expect(svg).toContain('transform="rotate(45 50 50)"')
+        expect(svg).toContain('<polygon points=')
+        expect(svg).toMatch(/<\/svg>$/)
+        expect(renderEmblemSvg('not json')).toBeNull()
+        expect(renderEmblemSvg(null)).toBeNull()
     })
 })
 

@@ -7,6 +7,7 @@ import { normalizeAppUrls, type UrlRules } from '#shared/app-urls'
 import { MAX_DEVELOPER_APPS, starBounty } from '#shared/economy'
 import type { AppInfo, DeveloperGame, OwnedGame } from '#shared/types/api'
 import { generateApiKey, hashApiKey, type AppRow } from '#server/utils/apps'
+import { playerAvatarUrl } from '#server/utils/emblem'
 import { coreUrl } from '#server/utils/launch-token'
 import { repoUrlField, SLUG_PATTERN, type UpdateOwnedGameInput } from '#server/utils/manifest'
 import { gameCounts, verifyApp } from '#server/utils/stars'
@@ -49,7 +50,7 @@ function urlsOrThrow(baseUrl: unknown, prefixes: string[] | undefined) {
 
 /** Apps as AppInfo, with game counts and owners, in two queries. */
 export async function listApps(ownerUserId?: string): Promise<AppInfo[]> {
-    const rows = await db.select({ app: apps, ownerName: user.name, ownerImage: user.image })
+    const rows = await db.select({ app: apps, ownerName: user.name, ownerImage: user.image, ownerEmblem: user.emblem })
         .from(apps)
         .leftJoin(user, eq(user.id, apps.ownerUserId))
         .where(ownerUserId ? eq(apps.ownerUserId, ownerUserId) : undefined)
@@ -60,15 +61,15 @@ export async function listApps(ownerUserId?: string): Promise<AppInfo[]> {
         .where(inArray(games.appId, rows.map(r => r.app.id)))
         .groupBy(games.appId)
     const byApp = new Map(counts.map(c => [c.appId, c.n]))
-    return rows.map(r => toAppInfo(r.app, byApp.get(r.app.id) ?? 0, r.ownerName ? { id: r.app.ownerUserId!, name: r.ownerName, image: r.ownerImage } : null))
+    return rows.map(r => toAppInfo(r.app, byApp.get(r.app.id) ?? 0, r.ownerName ? { id: r.app.ownerUserId!, name: r.ownerName, image: playerAvatarUrl({ id: r.app.ownerUserId!, image: r.ownerImage, emblem: r.ownerEmblem }) } : null))
 }
 
 export async function getAppInfo(appId: string): Promise<AppInfo> {
-    const [row] = await db.select({ app: apps, ownerName: user.name, ownerImage: user.image })
+    const [row] = await db.select({ app: apps, ownerName: user.name, ownerImage: user.image, ownerEmblem: user.emblem })
         .from(apps).leftJoin(user, eq(user.id, apps.ownerUserId)).where(eq(apps.id, appId))
     if (!row) throw createError({ statusCode: 404, statusMessage: `App ${appId} not found` })
     const [c] = await db.select({ n: count() }).from(games).where(eq(games.appId, appId))
-    return toAppInfo(row.app, c?.n ?? 0, row.ownerName ? { id: row.app.ownerUserId!, name: row.ownerName, image: row.ownerImage } : null)
+    return toAppInfo(row.app, c?.n ?? 0, row.ownerName ? { id: row.app.ownerUserId!, name: row.ownerName, image: playerAvatarUrl({ id: row.app.ownerUserId!, image: row.ownerImage, emblem: row.ownerEmblem }) } : null)
 }
 
 export function toAppInfo(app: AppRow, gameCount: number, owner: AppInfo['owner']): AppInfo {
