@@ -54,11 +54,11 @@ reference game must stay in step with it.
   unverified cap), `connections.ts`, `manifest.ts`, `apps.ts`, `app-registry.ts` (create/update apps,
   shared by admin and developer API), `developer-tokens.ts`, `launch-token.ts` (ES256 keys, rotation),
   `launch.ts`, `hub.ts` (read models), `rate-limit.ts`, `openapi.ts`, `developer-docs.ts`, `auth.ts`, `validate.ts`,
-  `csrf.ts`, `bootstrap-apps.ts`, `emblem.ts` (save, trim and list emblem history)
+  `csrf.ts`, `bootstrap-apps.ts`, `emblem.ts` (save, trim and list emblem history), `report-error.ts`
 - `shared/`: code for client and server. `economy.ts` (constants, titles, bounties, the claim pile,
   Amsterdam days), `app-urls.ts` (base/return/image/repo URL rules), `return-url.ts`, `random.ts`,
   `gem-history.ts`, `emblem.ts` (the drawn avatar: format, limits, `serializeEmblem`), `prestige.ts`
-  (ring tiers 0-4, display only), `developer-guide.ts` + `guide/developer-guide.md` (the one source of `/developers.md`
+  (ring tiers 0-4, display only), `sentry-scrub.ts` (query strings out of Rustrak events and spans), `developer-guide.ts` + `guide/developer-guide.md` (the one source of `/developers.md`
   and the `/developers` copy block), `types/api.ts` (every session API response shape)
 - `examples/hello-game/`: the reference integration (one Bun file + one HTML page), served raw to agents
 - `server/database/schema.ts` + `drizzle/` (generated migrations, committed)
@@ -179,13 +179,19 @@ nothing.
   `PNX_SIGNING_JWK` set, rotate by changing the env var instead.
 - There is no email provider: admins create one-time password reset links on `/admin/apps` (valid an hour,
   single use; a reset signs the player out everywhere). The public reset request route is disabled.
-- Errors go to Rustrak (Sentry-compatible, project `polynux-core`) when `NUXT_PUBLIC_SENTRY_DSN` is set,
-  unset in dev and tests. Server: `@sentry/bun` in `server/plugins/sentry.ts` (5xx, uncaught exceptions,
+- Errors and performance go to Rustrak (Sentry-compatible, project `polynux-core`) when `NUXT_PUBLIC_SENTRY_DSN`
+  is set, unset in dev and tests. `NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE` (default 0.2) is the share of requests
+  and page loads traced. Server: `@sentry/bun` in `server/plugins/sentry.ts` (5xx, uncaught exceptions,
   unhandled rejections; better-auth's own 500s through `onAPIError` in `auth.ts`), via `reportError()` in
-  `server/utils/report-error.ts`; no IPs, headers, cookies, query strings or bodies. Browser: `@sentry/vue` in
-  `app/plugins/01.sentry.client.ts`, loaded on demand, player id only, reported through Nuxt's `vue:error` /
-  `app:error` hooks (Sentry's own errorHandler would keep Nuxt's startup handler and show the error page for
-  every later component error). Never set `tracesSampleRate`: 0 also turns tracing on.
+  `server/utils/report-error.ts`; no IPs, headers, cookies, query strings or bodies. Request traces are named by
+  route (`GET /api/players/:id`; pages through `app/plugins/sentry-route.server.ts`); `/healthz`, `/api/presence`
+  and `/_nuxt/` aren't traced. Server traces hold the request only: Bun can't instrument modules at runtime, so
+  there are no database spans. Browser: `@sentry/vue` in `app/plugins/01.sentry.client.ts`, loaded on demand,
+  player id only, page loads and navigations named by route, Web Vitals; errors reported through Nuxt's
+  `vue:error` / `app:error` hooks (Sentry's own errorHandler would keep Nuxt's startup handler and show the error
+  page for every later component error). SDK v11 streams spans, so `beforeSendTransaction` never runs: scrub
+  spans in `beforeSendSpan` (`shared/sentry-scrub.ts` strips query strings, which the Vue router integration
+  copies raw into `query.*` attributes).
 - Browser source maps: `modules/sentry-sourcemaps.ts` uploads them to Rustrak when the build has
   `SENTRY_AUTH_TOKEN` (a Rustrak API token with `source-maps:create`, a Docker build secret), then deletes them
   so they are never served. Server stack traces need no upload: Bun applies the server build's own maps.

@@ -12,12 +12,14 @@ export default defineNuxtConfig({
 
     css: ['~/assets/css/main.css'],
 
-    // Error tracking (Rustrak, Sentry-compatible). Off unless NUXT_PUBLIC_SENTRY_DSN is set;
-    // NUXT_PUBLIC_SENTRY_ENVIRONMENT defaults to development/production.
+    // Error tracking and performance (Rustrak, Sentry-compatible). Off unless NUXT_PUBLIC_SENTRY_DSN is set;
+    // NUXT_PUBLIC_SENTRY_ENVIRONMENT defaults to development/production, NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE
+    // is the share of requests and page loads traced (0 to 1).
     runtimeConfig: {
         public: {
             sentryDsn: '',
-            sentryEnvironment: ''
+            sentryEnvironment: '',
+            sentryTracesSampleRate: 0.2
         }
     },
 
