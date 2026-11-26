@@ -9,7 +9,9 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --ignore-scripts
 
 COPY . .
-RUN bun --bun nuxt build
+# SENTRY_AUTH_TOKEN (optional, a build secret so it stays out of the image): uploads the browser
+# source maps to Rustrak (modules/sentry-sourcemaps.ts). Without it the build skips the upload.
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN bun --bun nuxt build
 
 
 FROM oven/bun:1.4-alpine

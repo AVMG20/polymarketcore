@@ -6,10 +6,20 @@ export default defineNuxtConfig({
 
     modules: [
         'shadcn-nuxt',
-        '@nuxtjs/color-mode'
+        '@nuxtjs/color-mode',
+        './modules/sentry-sourcemaps'
     ],
 
     css: ['~/assets/css/main.css'],
+
+    // Error tracking (Rustrak, Sentry-compatible). Off unless NUXT_PUBLIC_SENTRY_DSN is set;
+    // NUXT_PUBLIC_SENTRY_ENVIRONMENT defaults to development/production.
+    runtimeConfig: {
+        public: {
+            sentryDsn: '',
+            sentryEnvironment: ''
+        }
+    },
 
     // shadcn-nuxt registers app/components/ui itself (Button, Card, …); every
     // other folder is prefixed by its path (pnx/GemChip.vue → <PnxGemChip>).

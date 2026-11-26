@@ -8,6 +8,7 @@ import { checkImageUrl } from '#shared/app-urls'
 import { addDays, amsterdamDay } from '#shared/economy'
 import { grantWelcome } from '#server/utils/welcome'
 import { isEnvAdmin } from '#server/utils/admins'
+import { reportError } from '#server/utils/report-error'
 
 export const NAME_MAX_LENGTH = 30
 
@@ -87,6 +88,15 @@ export const auth = betterAuth({
     socialProviders: discordEnabled
         ? { discord: { clientId: discordId!, clientSecret: discordSecret! } }
         : {},
+    // better-auth answers its own errors with a Response, so Nitro's error hook never sees them.
+    // Setting this replaces its default logging: log faults here and report them; 4xx stay quiet.
+    onAPIError: {
+        onError: (error) => {
+            if (error instanceof APIError && error.statusCode < 500) return
+            console.error('[auth]', error)
+            reportError(error, { area: 'auth' })
+        }
+    },
     rateLimit: {
         window: 10,
         max: 100

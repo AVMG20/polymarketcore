@@ -39,6 +39,7 @@ reference game must stay in step with it.
 
 - `app/`: pages, layouts, middleware, composables, utils (auto-imported), `components/ui` (shadcn),
   `components/pnx` (hub components, used as `<PnxGemChip>`)
+- `modules/`: local Nuxt modules (`sentry-sourcemaps.ts`)
 - `server/api/`: session API for the hub UI; `server/api/v1/`: the app API (app key, contract §2) and
   `server/api/v1/developer/` (developer token, contract §2a); `server/api/v1/openapi.json.get.ts`
 - `server/routes/`: `/connect` (flow B), `/.well-known/jwks.json`, `/healthz`, `/developers.md`, `/llms.txt`,
@@ -47,7 +48,7 @@ reference game must stay in step with it.
   `server/middleware/csrf.ts`: refuses cookie-API writes (`/api/**` outside `/api/auth` and `/api/v1`) from
   other sites, including games on the hub's own site
 - `server/plugins/`: `bootstrap-apps.ts` (creates the apps in `BOOTSTRAP_APPS` on start), `config-check.ts`
-  (production refuses to start without its public URL)
+  (production refuses to start without its public URL), `sentry.ts` (error reporting)
 - `server/utils/`: all logic; handlers stay thin. `gems.ts` (the only writer of `user.gems`), `claim.ts`,
   `welcome.ts`, `stars.ts` (levels, bounties, verification, what counts), `spends.ts` (idempotency, the
   unverified cap), `connections.ts`, `manifest.ts`, `apps.ts`, `app-registry.ts` (create/update apps,
@@ -178,6 +179,16 @@ nothing.
   `PNX_SIGNING_JWK` set, rotate by changing the env var instead.
 - There is no email provider: admins create one-time password reset links on `/admin/apps` (valid an hour,
   single use; a reset signs the player out everywhere). The public reset request route is disabled.
+- Errors go to Rustrak (Sentry-compatible, project `polynux-core`) when `NUXT_PUBLIC_SENTRY_DSN` is set,
+  unset in dev and tests. Server: `@sentry/bun` in `server/plugins/sentry.ts` (5xx, uncaught exceptions,
+  unhandled rejections; better-auth's own 500s through `onAPIError` in `auth.ts`), via `reportError()` in
+  `server/utils/report-error.ts`; no IPs, headers, cookies, query strings or bodies. Browser: `@sentry/vue` in
+  `app/plugins/01.sentry.client.ts`, loaded on demand, player id only, reported through Nuxt's `vue:error` /
+  `app:error` hooks (Sentry's own errorHandler would keep Nuxt's startup handler and show the error page for
+  every later component error). Never set `tracesSampleRate`: 0 also turns tracing on.
+- Browser source maps: `modules/sentry-sourcemaps.ts` uploads them to Rustrak when the build has
+  `SENTRY_AUTH_TOKEN` (a Rustrak API token with `source-maps:create`, a Docker build secret), then deletes them
+  so they are never served. Server stack traces need no upload: Bun applies the server build's own maps.
 - Rate limits are in memory per process (`server/utils/rate-limit.ts`); with several replicas each has its own.
 
 ## Workflow
